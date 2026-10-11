@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123c32">
+  <title>فریلنسو | پلتفرم فریلنسری</title>
+  <style>
+    :root {
+      --green: #123c32;
+      --lime: #d9f36a;
+      --bg: #f7f8f3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: #172c26;
+      line-height: 1.9;
+    }
+    header {
+      background: white;
+      padding: 16px 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #e5eae2;
+    }
+    .brand { font-size: 23px; font-weight: bold; color: var(--green); }
+    .brand span { color: #88a91f; }
+    button, input, textarea, select { font: inherit; }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .primary { background: var(--green); color: white; }
+    .lime { background: var(--lime); color: var(--green); }
+    .hero {
+      background: var(--green);
+      color: white;
+      padding: 55px 6%;
+    }
+    .hero h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.6; }
+    .hero p { color: #d6e4dc; max-width: 650px; }
+    .search {
+      background: white;
+      border-radius: 16px;
+      padding: 8px;
+      display: flex;
+      gap: 8px;
+      max-width: 650px;
+      margin-top: 24px;
+    }
+    .search input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      padding: 10px;
+    }
+    main { width: 92%; max-width: 1100px; margin: 35px auto; }
+    h2 { color: var(--green); }
+    .categories { display: flex; flex-wrap: wrap; gap: 9px; margin: 18px 0; }
+    .category { background: white; border: 1px solid #e5eae2; color: var(--green); }
+    .category.active { background: var(--lime); border-color: var(--lime); }
+    .projects { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .card {
+      background: white;
+      border: 1px solid #e5eae2;
+      border-radius: 18px;
+      padding: 20px;
+    }
+    .card h3 { font-size: 16px; }
+    .muted { color: #718079; font-size: 13px; }
+    .price { color: var(--green); font-weight: bold; }
+    .form {
+      background: white;
+      border: 1px solid #e5eae2;
+      border-radius: 18px;
+      padding: 22px;
+      margin-top: 30px;
+    }
+    .form input, .form textarea, .form select {
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0 14px;
+      border: 1px solid #dce4da;
+      border-radius: 10px;
+      background: white;
+    }
+    footer {
+      background: var(--green);
+      color: white;
+      padding: 28px 5%;
+      text-align: center;
+    }
+    @media (max-width: 750px) {
+      .projects { grid-template-columns: 1fr; }
+      .hero { padding: 35px 5%; }
+      header { gap: 8px; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">فریلنس<span>و</span></div>
+    <button class="primary" onclick="document.getElementById('newProject').scrollIntoView({behavior:'smooth'})">ثبت پروژه</button>
+  </header>
+
+  <section class="hero">
+    <h1>مهارتت را به فرصت تبدیل کن ✨</h1>
+    <p>پروژه پیدا کن، متخصص مناسب را بشناس و مسیر همکاری حرفه‌ای خودت را شروع کن.</p>
+    <div class="search">
+      <input id="searchInput" placeholder="دنبال چه پروژه‌ای هستی؟">
+      <button class="lime" onclick="renderProjects()">جست‌وجو</button>
+    </div>
+    <p>طراحی سایت · برنامه‌نویسی · تولید محتوا · گرافیک</p>
+  </section>
+
+  <main>
+    <h2>پروژه‌های تازه</h2>
+    <p class="muted">پروژه موردنظرت را پیدا کن و برای همکاری پیشنهاد بده.</p>
+    <div class="categories">
+      <button class="category active" onclick="setCategory('همه',this)">همه پروژه‌ها</button>
+      <button class="category" onclick="setCategory('برنامه‌نویسی',this)">برنامه‌نویسی</button>
+      <button class="category" onclick="setCategory('طراحی',this)">طراحی</button>
+      <button class="category" onclick="setCategory('محتوا',this)">تولید محتوا</button>
+    </div>
+    <div id="projects" class="projects"></div>
+
+    <div id="newProject" class="form">
+      <h2>ثبت پروژه جدید</h2>
+      <p class="muted">این نسخه اولیه اطلاعات را فقط در همین مرورگر ذخیره می‌کند.</p>
+      <form id="projectForm">
+        <label for="title">عنوان پروژه</label>
+        <input id="title" required placeholder="مثلاً طراحی سایت فروشگاهی">
+        <label for="category">دسته‌بندی</label>
+        <select id="category" required>
+          <option value="برنامه‌نویسی">برنامه‌نویسی</option>
+          <option value="طراحی">طراحی</option>
+          <option value="محتوا">تولید محتوا</option>
+        </select>
+        <label for="budget">بودجه به تومان</label>
+        <input id="budget" type="number" min="0" required placeholder="مثلاً 3000000">
+        <label for="description">توضیحات پروژه</label>
+        <textarea id="description" rows="4" required placeholder="جزئیات پروژه را بنویس..."></textarea>
+        <button class="primary" type="submit">انتشار پروژه</button>
+      </form>
+      <p id="message" class="muted"></p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="brand" style="color:white">فریلنس<span>و</span></div>
+    <p>پلتفرم همکاری کارفرماها و فریلنسرها</p>
+    <small>نسخه اولیه — پرداخت آنلاین هنوز فعال نیست.</small>
+  </footer>
+
+  <script>
+    const storageKey = 'freelanso_projects_v1';
+    let categoryFilter = 'همه';
+
+    const starterProjects = [
+      {
+        id: 1,
+        title: 'طراحی سایت شرکتی',
+        category: 'برنامه‌نویسی',
+        budget: 5000000,
+        description: 'طراحی یک وب‌سایت شرکتی واکنش‌گرا با صفحات معرفی و تماس.',
+        demo: true
+      },
+      {
+        id: 2,
+        title: 'طراحی لوگوی برند',
+        category: 'طراحی',
+        budget: 1200000,
+        description: 'طراحی لوگوی ساده و حرفه‌ای برای یک کسب‌وکار نوپا.',
+        demo: true
+      },
+      {
+        id: 3,
+        title: 'تولید محتوای وبلاگ',
+        category: 'محتوا',
+        budget: 800000,
+        description: 'نگارش مقاله فارسی با ساختار منظم و تیترهای مناسب.',
+        demo: true
+      }
+    ];
+
+    function getProjects() {
+      try {
+        const data = JSON.parse(localStorage.getItem(storageKey));
+        return Array.isArray(data) ? data : starterProjects;
+      } catch {
+        return starterProjects;
+      }
+    }
+
+    function saveProjects(projects) {
+      localStorage.setItem(storageKey, JSON.stringify(projects));
+    }
+
+    function formatPrice(price) {
+      return Number(price).toLocaleString('fa-IR') + ' تومان';
+    }
+
+    function renderProjects() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const all = getProjects();
+      const filtered = all.filter(project => {
+        const matchesCategory = categoryFilter === 'همه' || project.category === categoryFilter;
+        const text = (project.title + ' ' + project.description + ' ' + project.category).toLowerCase();
+        return matchesCategory && text.includes(query);
+      });
+
+      const container = document.getElementById('projects');
+      if (!filtered.length) {
+        container.innerHTML = '<div class="card">پروژه‌ای مطابق جست‌وجوی شما پیدا نشد.</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(project => `
+        <article class="card">
+          <span class="category">${escapeHtml(project.category)}</span>
+          <h3>${escapeHtml(project.title)}</h3>
+          <p class="muted">${escapeHtml(project.description)}</p>
+          <p class="price">${formatPrice(project.budget)}</p>
+          ${project.demo ? '<p class="muted">نمونه نمایشی</p>' : ''}
+          <button class="primary" onclick="sendProposal(${Number(project.id)})">ارسال پیشنهاد</button>
+        </article>
+      `).join('');
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;',
+        '"': '&quot;', "'": '&#39;'
+      })[ch]);
+    }
+
+    function setCategory(category, button) {
+      categoryFilter = category;
+      document.querySelectorAll('.category').forEach(el => el.classList.remove('active'));
+      button.classList.add('active');
+      renderProjects();
+    }
+
+    function sendProposal(id) {
+      const project = getProjects().find(item => Number(item.id) === Number(id));
+      if (!project) return;
+      const proposal = prompt('برای پروژه «' + project.title + '» توضیح کوتاهی درباره پیشنهادت بنویس:');
+      if (proposal && proposal.trim()) {
+        alert('پیشنهاد فقط در همین نسخه نمایشی ثبت نشده است. برای ثبت واقعی، باید سرور و پایگاه داده متصل شوند.');
+      }
+    }
+
+    document.getElementById('projectForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const projects = getProjects();
+      projects.unshift({
+        id: Date.now(),
+        title: document.getElementById('title').value.trim(),
+        category: document.getElementById('category').value,
+        budget: Number(document.getElementById('budget').value),
+        description: document.getElementById('description').value.trim(),
+        demo: false
+      });
+
+      try {
+        saveProjects(projects);
+        document.getElementById('projectForm').reset();
+        document.getElementById('message').textContent = 'پروژه در همین مرورگر ذخیره شد.';
+        renderProjects();
+      } catch {
+        document.getElementById('message').textContent = 'ذخیره‌سازی انجام نشد؛ فضای مرورگر را بررسی کن.';
+      }
+    });
+
+    renderProjects();
+  </script>
+</body>
+</html>
