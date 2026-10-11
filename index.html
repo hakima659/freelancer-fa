@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123c32">
+  <meta name="description" content="فریلنسو؛ پلتفرم همکاری کارفرماها و فریلنسرها">
   <title>فریلنسو | پلتفرم فریلنسری</title>
   <style>
     :root {
@@ -37,6 +38,7 @@
       cursor: pointer;
       font-weight: bold;
     }
+    button:disabled { opacity: .6; cursor: wait; }
     .primary { background: var(--green); color: white; }
     .lime { background: var(--lime); color: var(--green); }
     .hero {
@@ -73,8 +75,9 @@
       border: 1px solid #e5eae2;
       border-radius: 18px;
       padding: 20px;
+      min-width: 0;
     }
-    .card h3 { font-size: 16px; }
+    .card h3 { font-size: 16px; overflow-wrap: anywhere; }
     .muted { color: #718079; font-size: 13px; }
     .price { color: var(--green); font-weight: bold; }
     .form {
@@ -92,6 +95,7 @@
       border-radius: 10px;
       background: white;
     }
+    .status { margin-top: 12px; overflow-wrap: anywhere; }
     footer {
       background: var(--green);
       color: white;
@@ -108,7 +112,10 @@
 <body>
   <header>
     <div class="brand">فریلنس<span>و</span></div>
-    <button class="primary" onclick="document.getElementById('newProject').scrollIntoView({behavior:'smooth'})">ثبت پروژه</button>
+    <button class="primary"
+      onclick="document.getElementById('newProject').scrollIntoView({behavior:'smooth'})">
+      ثبت پروژه
+    </button>
   </header>
 
   <section class="hero">
@@ -116,171 +123,278 @@
     <p>پروژه پیدا کن، متخصص مناسب را بشناس و مسیر همکاری حرفه‌ای خودت را شروع کن.</p>
     <div class="search">
       <input id="searchInput" placeholder="دنبال چه پروژه‌ای هستی؟">
-      <button class="lime" onclick="renderProjects()">جست‌وجو</button>
+      <button class="lime" type="button" onclick="renderProjects()">جست‌وجو</button>
     </div>
     <p>طراحی سایت · برنامه‌نویسی · تولید محتوا · گرافیک</p>
   </section>
 
   <main>
     <h2>پروژه‌های تازه</h2>
-    <p class="muted">پروژه موردنظرت را پیدا کن و برای همکاری پیشنهاد بده.</p>
+    <p class="muted">پروژه‌های دریافت‌شده از سرور فریلنسو</p>
+
     <div class="categories">
-      <button class="category active" onclick="setCategory('همه',this)">همه پروژه‌ها</button>
-      <button class="category" onclick="setCategory('برنامه‌نویسی',this)">برنامه‌نویسی</button>
-      <button class="category" onclick="setCategory('طراحی',this)">طراحی</button>
-      <button class="category" onclick="setCategory('محتوا',this)">تولید محتوا</button>
+      <button type="button" class="category active"
+        onclick="setCategory('همه',this)">همه پروژه‌ها</button>
+      <button type="button" class="category"
+        onclick="setCategory('برنامه‌نویسی',this)">برنامه‌نویسی</button>
+      <button type="button" class="category"
+        onclick="setCategory('طراحی',this)">طراحی</button>
+      <button type="button" class="category"
+        onclick="setCategory('محتوا',this)">تولید محتوا</button>
     </div>
-    <div id="projects" class="projects"></div>
+
+    <div id="projects" class="projects">
+      <div class="card">در حال دریافت پروژه‌ها...</div>
+    </div>
 
     <div id="newProject" class="form">
       <h2>ثبت پروژه جدید</h2>
-      <p class="muted">این نسخه اولیه اطلاعات را فقط در همین مرورگر ذخیره می‌کند.</p>
+      <p class="muted">پس از تأیید سرور، پروژه در فهرست نمایش داده می‌شود.</p>
+
       <form id="projectForm">
         <label for="title">عنوان پروژه</label>
-        <input id="title" required placeholder="مثلاً طراحی سایت فروشگاهی">
+        <input id="title" maxlength="150" required
+          placeholder="مثلاً طراحی سایت فروشگاهی">
+
         <label for="category">دسته‌بندی</label>
         <select id="category" required>
           <option value="برنامه‌نویسی">برنامه‌نویسی</option>
           <option value="طراحی">طراحی</option>
           <option value="محتوا">تولید محتوا</option>
         </select>
+
         <label for="budget">بودجه به تومان</label>
-        <input id="budget" type="number" min="0" required placeholder="مثلاً 3000000">
+        <input id="budget" type="number" min="0"
+          max="1000000000000" required placeholder="مثلاً 3000000">
+
         <label for="description">توضیحات پروژه</label>
-        <textarea id="description" rows="4" required placeholder="جزئیات پروژه را بنویس..."></textarea>
-        <button class="primary" type="submit">انتشار پروژه</button>
+        <textarea id="description" rows="4" maxlength="10000"
+          required placeholder="جزئیات پروژه را بنویس..."></textarea>
+
+        <button id="submitButton" class="primary" type="submit">
+          انتشار پروژه
+        </button>
       </form>
-      <p id="message" class="muted"></p>
+
+      <p id="message" class="status muted" role="status" aria-live="polite"></p>
     </div>
   </main>
 
   <footer>
     <div class="brand" style="color:white">فریلنس<span>و</span></div>
     <p>پلتفرم همکاری کارفرماها و فریلنسرها</p>
-    <small>نسخه اولیه — پرداخت آنلاین هنوز فعال نیست.</small>
+    <small>فریلنسو؛ بستری برای همکاری حرفه‌ای</small>
   </footer>
 
   <script>
-    const storageKey = 'freelanso_projects_v1';
+    const API_BASE = 'https://freelansofce.hakima09360.workers.dev';
+    let serverProjects = [];
     let categoryFilter = 'همه';
 
-    const starterProjects = [
-      {
-        id: 1,
-        title: 'طراحی سایت شرکتی',
-        category: 'برنامه‌نویسی',
-        budget: 5000000,
-        description: 'طراحی یک وب‌سایت شرکتی واکنش‌گرا با صفحات معرفی و تماس.',
-        demo: true
-      },
-      {
-        id: 2,
-        title: 'طراحی لوگوی برند',
-        category: 'طراحی',
-        budget: 1200000,
-        description: 'طراحی لوگوی ساده و حرفه‌ای برای یک کسب‌وکار نوپا.',
-        demo: true
-      },
-      {
-        id: 3,
-        title: 'تولید محتوای وبلاگ',
-        category: 'محتوا',
-        budget: 800000,
-        description: 'نگارش مقاله فارسی با ساختار منظم و تیترهای مناسب.',
-        demo: true
-      }
-    ];
-
-    function getProjects() {
-      try {
-        const data = JSON.parse(localStorage.getItem(storageKey));
-        return Array.isArray(data) ? data : starterProjects;
-      } catch {
-        return starterProjects;
-      }
-    }
-
-    function saveProjects(projects) {
-      localStorage.setItem(storageKey, JSON.stringify(projects));
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[ch]);
     }
 
     function formatPrice(price) {
-      return Number(price).toLocaleString('fa-IR') + ' تومان';
+      const n = Number(price);
+      if (!Number.isFinite(n)) return 'بودجه اعلام نشده';
+      return n.toLocaleString('fa-IR') + ' تومان';
+    }
+
+    function setMessage(text, isError = false) {
+      const el = document.getElementById('message');
+      el.textContent = text;
+      el.style.color = isError ? '#b42318' : '#356b36';
+    }
+
+    async function apiRequest(path, options = {}) {
+      const response = await fetch(API_BASE + path, {
+        ...options,
+        headers: {
+          'Accept': 'application/json',
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          ...(options.headers || {})
+        }
+      });
+
+      const raw = await response.text();
+      let data = {};
+
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error('پاسخ سرور JSON معتبر نیست.');
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || ('خطای سرور: ' + response.status)
+        );
+      }
+
+      if (data.ok === false) {
+        throw new Error(data.error || data.message || 'درخواست انجام نشد.');
+      }
+
+      return data;
+    }
+
+    async function loadProjects() {
+      const container = document.getElementById('projects');
+      container.innerHTML = '<div class="card">در حال دریافت پروژه‌ها...</div>';
+
+      try {
+        const data = await apiRequest('/api/projects');
+
+        if (!Array.isArray(data.projects)) {
+          throw new Error('ساختار پاسخ فهرست پروژه‌ها نامعتبر است.');
+        }
+
+        serverProjects = data.projects.map(project => ({
+          ...project,
+          budget: Number(project.budget)
+        }));
+
+        renderProjects();
+      } catch (error) {
+        container.innerHTML =
+          '<div class="card">دریافت پروژه‌ها از سرور ناموفق بود. ' +
+          'اتصال API را بررسی کنید.</div>';
+        console.error('Load projects error:', error);
+      }
     }
 
     function renderProjects() {
-      const query = document.getElementById('searchInput').value.trim().toLowerCase();
-      const all = getProjects();
-      const filtered = all.filter(project => {
-        const matchesCategory = categoryFilter === 'همه' || project.category === categoryFilter;
-        const text = (project.title + ' ' + project.description + ' ' + project.category).toLowerCase();
+      const query = document.getElementById('searchInput')
+        .value.trim().toLocaleLowerCase('fa');
+
+      const filtered = serverProjects.filter(project => {
+        const matchesCategory =
+          categoryFilter === 'همه' || project.category === categoryFilter;
+
+        const text = (
+          String(project.title || '') + ' ' +
+          String(project.description || '') + ' ' +
+          String(project.category || '')
+        ).toLocaleLowerCase('fa');
+
         return matchesCategory && text.includes(query);
       });
 
       const container = document.getElementById('projects');
+
       if (!filtered.length) {
-        container.innerHTML = '<div class="card">پروژه‌ای مطابق جست‌وجوی شما پیدا نشد.</div>';
+        container.innerHTML =
+          '<div class="card">پروژه‌ای پیدا نشد. می‌توانی اولین پروژه را ثبت کنی.</div>';
         return;
       }
 
       container.innerHTML = filtered.map(project => `
         <article class="card">
-          <span class="category">${escapeHtml(project.category)}</span>
-          <h3>${escapeHtml(project.title)}</h3>
-          <p class="muted">${escapeHtml(project.description)}</p>
+          <span class="category">${escapeHtml(project.category || 'عمومی')}</span>
+          <h3>${escapeHtml(project.title || 'بدون عنوان')}</h3>
+          <p class="muted">${escapeHtml(project.description || '')}</p>
           <p class="price">${formatPrice(project.budget)}</p>
-          ${project.demo ? '<p class="muted">نمونه نمایشی</p>' : ''}
-          <button class="primary" onclick="sendProposal(${Number(project.id)})">ارسال پیشنهاد</button>
+          <button class="primary" type="button"
+            onclick="sendProposal(${JSON.stringify(String(project.id ?? ''))})">
+            ارسال پیشنهاد
+          </button>
         </article>
       `).join('');
     }
 
-    function escapeHtml(value) {
-      return String(value).replace(/[&<>"']/g, ch => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;',
-        '"': '&quot;', "'": '&#39;'
-      })[ch]);
-    }
-
     function setCategory(category, button) {
       categoryFilter = category;
-      document.querySelectorAll('.category').forEach(el => el.classList.remove('active'));
+
+      document.querySelectorAll('.categories .category')
+        .forEach(el => el.classList.remove('active'));
+
       button.classList.add('active');
       renderProjects();
     }
 
-    function sendProposal(id) {
-      const project = getProjects().find(item => Number(item.id) === Number(id));
+    async function sendProposal(id) {
+      const project = serverProjects.find(
+        item => String(item.id) === String(id)
+      );
+
       if (!project) return;
-      const proposal = prompt('برای پروژه «' + project.title + '» توضیح کوتاهی درباره پیشنهادت بنویس:');
-      if (proposal && proposal.trim()) {
-        alert('پیشنهاد فقط در همین نسخه نمایشی ثبت نشده است. برای ثبت واقعی، باید سرور و پایگاه داده متصل شوند.');
-      }
+
+      const proposal = prompt(
+        'برای پروژه «' + project.title +
+        '» توضیح پیشنهادت را بنویس:'
+      );
+
+      if (!proposal || !proposal.trim()) return;
+
+      alert(
+        'ثبت پیشنهاد هنوز در این صفحه فعال نشده است. ' +
+        'برای ذخیره واقعی پیشنهاد، باید مسیر POST /api/proposals ' +
+        'در Worker پیاده‌سازی و آزمایش شود.'
+      );
     }
 
-    document.getElementById('projectForm').addEventListener('submit', event => {
-      event.preventDefault();
-      const projects = getProjects();
-      projects.unshift({
-        id: Date.now(),
-        title: document.getElementById('title').value.trim(),
-        category: document.getElementById('category').value,
-        budget: Number(document.getElementById('budget').value),
-        description: document.getElementById('description').value.trim(),
-        demo: false
+    document.getElementById('projectForm')
+      .addEventListener('submit', async event => {
+        event.preventDefault();
+
+        const button = document.getElementById('submitButton');
+        button.disabled = true;
+        button.textContent = 'در حال ارسال...';
+        setMessage('در حال ارسال پروژه به سرور...');
+
+        const project = {
+          title: document.getElementById('title').value.trim(),
+          category: document.getElementById('category').value,
+          budget: Number(document.getElementById('budget').value),
+          description: document.getElementById('description').value.trim()
+        };
+
+        if (
+          !project.title ||
+          !project.description ||
+          !Number.isFinite(project.budget) ||
+          project.budget < 0
+        ) {
+          setMessage('اطلاعات پروژه را بررسی کن.', true);
+          button.disabled = false;
+          button.textContent = 'انتشار پروژه';
+          return;
+        }
+
+        try {
+          /*
+           * این درخواست فقط وقتی موفق می‌شود که Worker
+           * مسیر POST /api/projects را پیاده‌سازی کرده باشد.
+           */
+          await apiRequest('/api/projects', {
+            method: 'POST',
+            body: JSON.stringify(project)
+          });
+
+          document.getElementById('projectForm').reset();
+          setMessage('پروژه با موفقیت به سرور ارسال شد.');
+          await loadProjects();
+        } catch (error) {
+          console.error('Create project error:', error);
+          setMessage(
+            'پروژه در سرور ثبت نشد: ' + error.message +
+            '؛ کد Worker و مسیر POST /api/projects را بررسی کن.',
+            true
+          );
+        } finally {
+          button.disabled = false;
+          button.textContent = 'انتشار پروژه';
+        }
       });
 
-      try {
-        saveProjects(projects);
-        document.getElementById('projectForm').reset();
-        document.getElementById('message').textContent = 'پروژه در همین مرورگر ذخیره شد.';
-        renderProjects();
-      } catch {
-        document.getElementById('message').textContent = 'ذخیره‌سازی انجام نشد؛ فضای مرورگر را بررسی کن.';
-      }
-    });
-
-    renderProjects();
+    loadProjects();
   </script>
 </body>
 </html>
