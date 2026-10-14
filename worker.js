@@ -115,12 +115,9 @@ function b64url(bytes) {
 }
 
 function decodeB64url(text) {
-  const base64 = String(text)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-
-  const padded =
-    base64 + "=".repeat((4 - base64.length % 4) % 4);
+  const value = String(text || "");
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
 
   return Uint8Array.from(
     atob(padded),
@@ -129,21 +126,27 @@ function decodeB64url(text) {
 }
 
 /*
- * رمزگذاری رمز عبور
- * PBKDF2 + SHA-256
+ * رمزگذاری رمز عبور با PBKDF2 و SHA-256
  */
 async function passwordHash(password, salt) {
-  const enc = new TextEncoder();
+  const passwordBytes = new TextEncoder().encode(
+    String(password)
+  );
 
-  const passwordBytes = enc.encode(String(password));
   const saltBytes = decodeB64url(String(salt));
+
+  if (passwordBytes.length === 0) {
+    throw new Error("EMPTY_PASSWORD");
+  }
+
+  if (saltBytes.length < 16) {
+    throw new Error("INVALID_SALT");
+  }
 
   const key = await crypto.subtle.importKey(
     "raw",
-    passwordBytes.buffer,
-    {
-      name: "PBKDF2"
-    },
+    passwordBytes,
+    "PBKDF2",
     false,
     ["deriveBits"]
   );
@@ -151,7 +154,7 @@ async function passwordHash(password, salt) {
   const bits = await crypto.subtle.deriveBits(
     {
       name: "PBKDF2",
-      salt: saltBytes.buffer,
+      salt: saltBytes,
       iterations: 120000,
       hash: "SHA-256"
     },
@@ -266,8 +269,7 @@ function effectivePlan(user) {
 }
 
 async function getUser(request, env) {
-  const header =
-    request.headers.get("Authorization") || "";
+  const header = request.headers.get("Authorization") || "";
 
   const token = header.startsWith("Bearer ")
     ? header.slice(7)
@@ -293,25 +295,17 @@ async function getUser(request, env) {
 }
 
 async function adminAllowed(request, env) {
-  const supplied =
-    request.headers.get("X-Admin-Token") || "";
+  const supplied = request.headers.get("X-Admin-Token") || "";
+  const expected = env.ADMIN_TOKEN || env["کد_مدیر"] || "";
 
-  const expected =
-    env.ADMIN_TOKEN || env["کد_مدیر"] || "";
-
-  if (
-    !expected ||
-    supplied.length !== expected.length
-  ) {
+  if (!expected || supplied.length !== expected.length) {
     return false;
   }
 
   let mismatch = 0;
 
   for (let i = 0; i < supplied.length; i++) {
-    mismatch |=
-      supplied.charCodeAt(i) ^
-      expected.charCodeAt(i);
+    mismatch |= supplied.charCodeAt(i) ^ expected.charCodeAt(i);
   }
 
   return mismatch === 0;
@@ -358,10 +352,7 @@ async function handle(request, env) {
   }
 
   if (!env.DB) {
-    return fail(
-      "اتصال پایگاه داده DB برقرار نیست.",
-      500
-    );
+    return fail("اتصال پایگاه داده DB برقرار نیست.", 500);
   }
 
   if (path === "/health" && method === "GET") {
@@ -374,70 +365,34 @@ async function handle(request, env) {
     });
   }
 
-  // بررسی ساختار جدول‌های D1
   if (path === "/api/db-check" && method === "GET") {
     const requiredSchema = {
       users: [
-        "id",
-        "phone",
-        "password_hash",
-        "password_salt",
-        "plan_id",
-        "subscription_expires_at",
-        "created_at"
+        "id", "phone", "password_hash", "password_salt",
+        "plan_id", "subscription_expires_at", "created_at"
       ],
-
       projects: [
-        "id",
-        "title",
-        "category",
-        "budget",
-        "description",
-        "created_at"
+        "id", "title", "category", "budget",
+        "description", "created_at"
       ],
-
-      project_owners: [
-        "project_id",
-        "user_id"
-      ],
-
+      project_owners: ["project_id", "user_id"],
       proposals: [
-        "id",
-        "project_id",
-        "freelancer_name",
-        "description",
-        "price",
-        "created_at"
+        "id", "project_id", "freelancer_name",
+        "description", "price", "created_at"
       ],
-
-      proposal_owners: [
-        "proposal_id",
-        "user_id"
-      ],
-
+      proposal_owners: ["proposal_id", "user_id"],
       subscription_payments: [
-        "id",
-        "user_id",
-        "plan_id",
-        "amount",
-        "phone",
-        "payment_reference",
-        "status",
-        "admin_note",
-        "created_at",
-        "reviewed_at"
+        "id", "user_id", "plan_id", "amount", "phone",
+        "payment_reference", "status", "admin_note",
+        "created_at", "reviewed_at"
       ]
     };
 
     const tables = {};
 
-    for (
-      const [table, required]
-      of Object.entries(requiredSchema)
-    ) {
+    for (const [table, required] of Object.entries(requiredSchema)) {
       const exists = await env.DB.prepare(
-        `SELECT name
-         FROM sqlite_master
+        `SELECT name FROM sqlite_master
          WHERE type = 'table' AND name = ?`
       ).bind(table).first();
 
@@ -446,7 +401,6 @@ async function handle(request, env) {
           exists: false,
           missing: required
         };
-
         continue;
       }
 
@@ -485,26 +439,14 @@ async function handle(request, env) {
     });
   }
 
-  // اطلاعات کارت
-  if (
-    path === "/api/payment-info" &&
-    method === "GET"
-  ) {
+  if (path === "/api/payment-info" && method === "GET") {
     return json({
       ok: true,
-      cardHolder:
-        env.CARD_HOLDER ||
-        env["دارنده کارت"] ||
-        "",
-
-      cardNumber:
-        env.CARD_NUMBER ||
-        env["شماره کارت"] ||
-        ""
+      cardHolder: env.CARD_HOLDER || env["دارنده کارت"] || "",
+      cardNumber: env.CARD_NUMBER || env["شماره کارت"] || ""
     });
   }
 
-  // پلن‌ها
   if (path === "/api/plans" && method === "GET") {
     return json({
       ok: true,
@@ -513,63 +455,42 @@ async function handle(request, env) {
   }
 
   // ثبت‌نام
-  if (
-    path === "/api/auth/register" &&
-    method === "POST"
-  ) {
+  if (path === "/api/auth/register" && method === "POST") {
     const secret = getAuthSecret(env);
 
     if (!secret) {
-      return fail(
-        "تنظیم رمز تأیید سرور انجام نشده است.",
-        500
-      );
+      return fail("تنظیم رمز تأیید سرور انجام نشده است.", 500);
     }
 
     const body = await readBody(request);
 
     if (!body) {
-      return fail(
-        "اطلاعات ارسالی معتبر نیست."
-      );
+      return fail("اطلاعات ارسالی معتبر نیست.");
     }
 
     const phone = normalizePhone(body.phone);
     const password = String(body.password || "");
 
     if (!validPhone(phone)) {
-      return fail(
-        "شماره موبایل باید با 09 شروع شود و ۱۱ رقم داشته باشد."
-      );
+      return fail("شماره موبایل باید با 09 شروع شود و ۱۱ رقم داشته باشد.");
     }
 
-    if (
-      password.length < 8 ||
-      password.length > 128
-    ) {
-      return fail(
-        "رمز عبور باید بین ۸ تا ۱۲۸ نویسه باشد."
-      );
+    if (password.length < 8 || password.length > 128) {
+      return fail("رمز عبور باید بین ۸ تا ۱۲۸ نویسه باشد.");
     }
 
     const salt = b64url(
-      crypto.getRandomValues(
-        new Uint8Array(16)
-      )
+      crypto.getRandomValues(new Uint8Array(16))
     );
 
     let stage = "hash";
 
     try {
-      const hash = await passwordHash(
-        password,
-        salt
-      );
+      const hash = await passwordHash(password, salt);
 
       stage = "insert";
 
-      const createdAt =
-        new Date().toISOString();
+      const createdAt = new Date().toISOString();
 
       const result = await env.DB.prepare(
         `INSERT INTO users
@@ -583,13 +504,10 @@ async function handle(request, env) {
         createdAt
       ).run();
 
-      const userId =
-        result.meta?.last_row_id;
+      const userId = result.meta?.last_row_id;
 
       if (!userId) {
-        console.error(
-          "Register did not return a user ID."
-        );
+        console.error("Register did not return a user ID.");
 
         return fail(
           "حساب ذخیره شد یا شناسه آن دریافت نشد. کد REGISTER_NO_ID",
@@ -602,9 +520,7 @@ async function handle(request, env) {
       const token = await signToken(
         {
           uid: userId,
-          exp:
-            Math.floor(Date.now() / 1000) +
-            60 * 60 * 24 * 7
+          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
         },
         secret
       );
@@ -612,7 +528,6 @@ async function handle(request, env) {
       return json({
         ok: true,
         token,
-
         user: {
           id: userId,
           phone,
@@ -621,8 +536,7 @@ async function handle(request, env) {
       }, 201);
 
     } catch (error) {
-      const errorText =
-        String(error?.message || error);
+      const errorText = String(error?.message || error);
 
       console.error(
         "Freelanso registration failed at stage:",
@@ -634,62 +548,41 @@ async function handle(request, env) {
         errorText.includes("UNIQUE") ||
         errorText.includes("users.phone")
       ) {
-        return fail(
-          "این شماره قبلاً ثبت‌نام کرده است.",
-          409
-        );
+        return fail("این شماره قبلاً ثبت‌نام کرده است.", 409);
       }
 
       const messages = {
-        hash:
-          "خطای ثبت‌نام در مرحله رمزگذاری رمز عبور رخ داد. کد REGISTER_HASH_FAILED",
-
-        insert:
-          "خطای ثبت حساب در پایگاه داده رخ داد. کد REGISTER_INSERT_FAILED",
-
-        token:
-          "حساب ایجاد شده، اما ساخت توکن ورود خطا داد. کد REGISTER_TOKEN_FAILED"
+        hash: "خطای ثبت‌نام در مرحله رمزگذاری رمز عبور رخ داد. کد REGISTER_HASH_FAILED",
+        insert: "خطای ثبت حساب در پایگاه داده رخ داد. کد REGISTER_INSERT_FAILED",
+        token: "حساب ایجاد شده، اما ساخت توکن ورود خطا داد. کد REGISTER_TOKEN_FAILED"
       };
 
       return fail(
-        messages[stage] ||
-        "ثبت‌نام ناموفق بود. کد REGISTER_FAILED",
+        messages[stage] || "ثبت‌نام ناموفق بود. کد REGISTER_FAILED",
         500
       );
     }
   }
 
   // ورود
-  if (
-    path === "/api/auth/login" &&
-    method === "POST"
-  ) {
+  if (path === "/api/auth/login" && method === "POST") {
     const secret = getAuthSecret(env);
 
     if (!secret) {
-      return fail(
-        "تنظیم رمز تأیید سرور انجام نشده است.",
-        500
-      );
+      return fail("تنظیم رمز تأیید سرور انجام نشده است.", 500);
     }
 
     const body = await readBody(request);
 
     if (!body) {
-      return fail(
-        "اطلاعات ارسالی معتبر نیست."
-      );
+      return fail("اطلاعات ارسالی معتبر نیست.");
     }
 
     const phone = normalizePhone(body.phone);
-    const password =
-      String(body.password || "");
+    const password = String(body.password || "");
 
     if (!validPhone(phone) || !password) {
-      return fail(
-        "شماره موبایل یا رمز عبور نادرست است.",
-        401
-      );
+      return fail("شماره موبایل یا رمز عبور نادرست است.", 401);
     }
 
     const user = await env.DB.prepare(
@@ -700,33 +593,22 @@ async function handle(request, env) {
     ).bind(phone).first();
 
     if (!user) {
-      return fail(
-        "شماره موبایل یا رمز عبور نادرست است.",
-        401
-      );
+      return fail("شماره موبایل یا رمز عبور نادرست است.", 401);
     }
 
-    const candidate =
-      await passwordHash(
-        password,
-        user.password_salt
-      );
+    const candidate = await passwordHash(
+      password,
+      user.password_salt
+    );
 
-    if (
-      candidate !== user.password_hash
-    ) {
-      return fail(
-        "شماره موبایل یا رمز عبور نادرست است.",
-        401
-      );
+    if (candidate !== user.password_hash) {
+      return fail("شماره موبایل یا رمز عبور نادرست است.", 401);
     }
 
     const token = await signToken(
       {
         uid: user.id,
-        exp:
-          Math.floor(Date.now() / 1000) +
-          60 * 60 * 24 * 7
+        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
       },
       secret
     );
@@ -734,30 +616,21 @@ async function handle(request, env) {
     return json({
       ok: true,
       token,
-
       user: {
         id: user.id,
         phone: user.phone,
         plan_id: user.plan_id,
-        subscription_expires_at:
-          user.subscription_expires_at
+        subscription_expires_at: user.subscription_expires_at
       }
     });
   }
 
   // اطلاعات حساب
-  if (
-    path === "/api/auth/me" &&
-    method === "GET"
-  ) {
-    const user =
-      await getUser(request, env);
+  if (path === "/api/auth/me" && method === "GET") {
+    const user = await getUser(request, env);
 
     if (!user) {
-      return fail(
-        "برای ادامه وارد حساب شو.",
-        401
-      );
+      return fail("برای ادامه وارد حساب شو.", 401);
     }
 
     return json({
@@ -768,13 +641,9 @@ async function handle(request, env) {
   }
 
   // فهرست عمومی پروژه‌ها
-  if (
-    path === "/api/projects" &&
-    method === "GET"
-  ) {
+  if (path === "/api/projects" && method === "GET") {
     const result = await env.DB.prepare(
-      `SELECT id, title, category, budget,
-              description, created_at
+      `SELECT id, title, category, budget, description, created_at
        FROM projects
        ORDER BY id DESC
        LIMIT 100`
@@ -787,69 +656,38 @@ async function handle(request, env) {
   }
 
   // ثبت پروژه
-  if (
-    path === "/api/projects" &&
-    method === "POST"
-  ) {
-    const user =
-      await getUser(request, env);
+  if (path === "/api/projects" && method === "POST") {
+    const user = await getUser(request, env);
 
     if (!user) {
-      return fail(
-        "برای ثبت پروژه ابتدا وارد حساب شو.",
-        401
-      );
+      return fail("برای ثبت پروژه ابتدا وارد حساب شو.", 401);
     }
 
     const plan = effectivePlan(user);
     const body = await readBody(request);
 
     if (!body) {
-      return fail(
-        "اطلاعات پروژه معتبر نیست."
-      );
+      return fail("اطلاعات پروژه معتبر نیست.");
     }
 
-    const title =
-      String(body.title || "").trim();
-
-    const category =
-      String(body.category || "").trim();
-
-    const description =
-      String(body.description || "").trim();
-
-    const budget =
-      Number(body.budget);
+    const title = String(body.title || "").trim();
+    const category = String(body.category || "").trim();
+    const description = String(body.description || "").trim();
+    const budget = Number(body.budget);
 
     if (
-      title.length < 3 ||
-      title.length > 150 ||
-      category.length < 2 ||
-      category.length > 80 ||
-      description.length < 10 ||
-      description.length > 5000 ||
-      !Number.isSafeInteger(budget) ||
-      budget < 0
+      title.length < 3 || title.length > 150 ||
+      category.length < 2 || category.length > 80 ||
+      description.length < 10 || description.length > 5000 ||
+      !Number.isSafeInteger(budget) || budget < 0
     ) {
-      return fail(
-        "عنوان، دسته‌بندی، توضیحات یا بودجه معتبر نیست."
-      );
+      return fail("عنوان، دسته‌بندی، توضیحات یا بودجه معتبر نیست.");
     }
 
-    const count =
-      await countProjects(
-        env,
-        user.id
-      );
+    const count = await countProjects(env, user.id);
 
-    if (
-      count >= plan.projectLimit
-    ) {
-      return fail(
-        "سقف ثبت پروژه پلن شما تکمیل شده است. برای ادامه پلن خود را ارتقا بده.",
-        403
-      );
+    if (count >= plan.projectLimit) {
+      return fail("سقف ثبت پروژه پلن شما تکمیل شده است. برای ادامه پلن خود را ارتقا بده.", 403);
     }
 
     const result = await env.DB.prepare(
@@ -864,24 +702,16 @@ async function handle(request, env) {
       new Date().toISOString()
     ).run();
 
-    const projectId =
-      result.meta?.last_row_id;
+    const projectId = result.meta?.last_row_id;
 
     if (!projectId) {
-      return fail(
-        "پروژه ساخته نشد.",
-        500
-      );
+      return fail("پروژه ساخته نشد.", 500);
     }
 
     await env.DB.prepare(
-      `INSERT INTO project_owners
-       (project_id, user_id)
+      `INSERT INTO project_owners (project_id, user_id)
        VALUES (?, ?)`
-    ).bind(
-      projectId,
-      user.id
-    ).run();
+    ).bind(projectId, user.id).run();
 
     return json({
       ok: true,
@@ -891,98 +721,57 @@ async function handle(request, env) {
   }
 
   // ارسال پیشنهاد
-  if (
-    path === "/api/proposals" &&
-    method === "POST"
-  ) {
-    const user =
-      await getUser(request, env);
+  if (path === "/api/proposals" && method === "POST") {
+    const user = await getUser(request, env);
 
     if (!user) {
-      return fail(
-        "برای ارسال پیشنهاد ابتدا وارد حساب شو.",
-        401
-      );
+      return fail("برای ارسال پیشنهاد ابتدا وارد حساب شو.", 401);
     }
 
     const plan = effectivePlan(user);
     const body = await readBody(request);
 
     if (!body) {
-      return fail(
-        "اطلاعات پیشنهاد معتبر نیست."
-      );
+      return fail("اطلاعات پیشنهاد معتبر نیست.");
     }
 
-    const projectId =
-      Number(body.project_id);
-
-    const description =
-      String(body.description || "").trim();
-
-    const price =
-      Number(body.price);
+    const projectId = Number(body.project_id);
+    const description = String(body.description || "").trim();
+    const price = Number(body.price);
 
     if (
-      !Number.isSafeInteger(projectId) ||
-      projectId < 1 ||
-      description.length < 10 ||
-      description.length > 4000 ||
-      !Number.isSafeInteger(price) ||
-      price < 0
+      !Number.isSafeInteger(projectId) || projectId < 1 ||
+      description.length < 10 || description.length > 4000 ||
+      !Number.isSafeInteger(price) || price < 0
     ) {
-      return fail(
-        "اطلاعات پیشنهاد معتبر نیست."
-      );
+      return fail("اطلاعات پیشنهاد معتبر نیست.");
     }
 
-    const project =
-      await env.DB.prepare(
-        "SELECT id FROM projects WHERE id = ?"
-      ).bind(projectId).first();
+    const project = await env.DB.prepare(
+      "SELECT id FROM projects WHERE id = ?"
+    ).bind(projectId).first();
 
     if (!project) {
-      return fail(
-        "پروژه پیدا نشد.",
-        404
-      );
+      return fail("پروژه پیدا نشد.", 404);
     }
 
-    const owner =
-      await env.DB.prepare(
-        "SELECT user_id FROM project_owners WHERE project_id = ?"
-      ).bind(projectId).first();
+    const owner = await env.DB.prepare(
+      "SELECT user_id FROM project_owners WHERE project_id = ?"
+    ).bind(projectId).first();
 
-    if (
-      owner &&
-      owner.user_id === user.id
-    ) {
-      return fail(
-        "نمی‌توانی برای پروژه خودت پیشنهاد بفرستی.",
-        403
-      );
+    if (owner && owner.user_id === user.id) {
+      return fail("نمی‌توانی برای پروژه خودت پیشنهاد بفرستی.", 403);
     }
 
-    const count =
-      await countProposals(
-        env,
-        user.id
-      );
+    const count = await countProposals(env, user.id);
 
-    if (
-      plan.proposalLimit !== null &&
-      count >= plan.proposalLimit
-    ) {
-      return fail(
-        "سقف پیشنهادهای پلن شما تکمیل شده است. پلن خود را ارتقا بده.",
-        403
-      );
+    if (plan.proposalLimit !== null && count >= plan.proposalLimit) {
+      return fail("سقف پیشنهادهای پلن شما تکمیل شده است. پلن خود را ارتقا بده.", 403);
     }
 
     const result = await env.DB.prepare(
       `INSERT INTO proposals
-       (project_id, freelancer_name, description,
-        price, created_at)
+       (project_id, freelancer_name, description, price, created_at)
        VALUES (?, ?, ?, ?, ?)`
     ).bind(
       projectId,
@@ -992,24 +781,16 @@ async function handle(request, env) {
       new Date().toISOString()
     ).run();
 
-    const proposalId =
-      result.meta?.last_row_id;
+    const proposalId = result.meta?.last_row_id;
 
     if (!proposalId) {
-      return fail(
-        "پیشنهاد ثبت نشد.",
-        500
-      );
+      return fail("پیشنهاد ثبت نشد.", 500);
     }
 
     await env.DB.prepare(
-      `INSERT INTO proposal_owners
-       (proposal_id, user_id)
+      `INSERT INTO proposal_owners (proposal_id, user_id)
        VALUES (?, ?)`
-    ).bind(
-      proposalId,
-      user.id
-    ).run();
+    ).bind(proposalId, user.id).run();
 
     return json({
       ok: true,
@@ -1019,290 +800,167 @@ async function handle(request, env) {
   }
 
   // درخواست اشتراک
-  if (
-    path === "/api/subscriptions/request" &&
-    method === "POST"
-  ) {
-    const user =
-      await getUser(request, env);
+  if (path === "/api/subscriptions/request" && method === "POST") {
+    const user = await getUser(request, env);
 
     if (!user) {
-      return fail(
-        "ابتدا وارد حساب شو.",
-        401
-      );
+      return fail("ابتدا وارد حساب شو.", 401);
     }
 
-    const body =
-      await readBody(request);
+    const body = await readBody(request);
 
     if (!body) {
-      return fail(
-        "اطلاعات پرداخت معتبر نیست."
-      );
+      return fail("اطلاعات پرداخت معتبر نیست.");
     }
 
-    const planId =
-      String(body.plan_id || "");
+    const planId = String(body.plan_id || "");
+    const reference = String(body.payment_reference || "").trim();
 
-    const reference =
-      String(
-        body.payment_reference || ""
-      ).trim();
-
-    if (
-      !PLANS[planId] ||
-      planId === "free"
-    ) {
-      return fail(
-        "پلن انتخاب‌شده معتبر نیست."
-      );
+    if (!PLANS[planId] || planId === "free") {
+      return fail("پلن انتخاب‌شده معتبر نیست.");
     }
 
-    if (
-      reference.length < 3 ||
-      reference.length > 150
-    ) {
-      return fail(
-        "شماره پیگیری یا شناسه پرداخت را وارد کن."
-      );
+    if (reference.length < 3 || reference.length > 150) {
+      return fail("شماره پیگیری یا شناسه پرداخت را وارد کن.");
     }
 
-    const existing =
-      await env.DB.prepare(
-        `SELECT id
-         FROM subscription_payments
-         WHERE user_id = ?
-           AND status = 'pending'
-         LIMIT 1`
-      ).bind(user.id).first();
+    const existing = await env.DB.prepare(
+      `SELECT id FROM subscription_payments
+       WHERE user_id = ? AND status = 'pending'
+       LIMIT 1`
+    ).bind(user.id).first();
 
     if (existing) {
-      return fail(
-        "یک درخواست پرداخت شما هنوز در انتظار بررسی است.",
-        409
-      );
+      return fail("یک درخواست پرداخت شما هنوز در انتظار بررسی است.", 409);
     }
 
-    const plan =
-      PLANS[planId];
+    const plan = PLANS[planId];
 
-    const result =
-      await env.DB.prepare(
-        `INSERT INTO subscription_payments
-         (user_id, plan_id, amount, phone,
-          payment_reference, status, created_at)
-         VALUES (?, ?, ?, ?, ?, 'pending', ?)`
-      ).bind(
-        user.id,
-        planId,
-        plan.price,
-        user.phone,
-        reference,
-        new Date().toISOString()
-      ).run();
+    const result = await env.DB.prepare(
+      `INSERT INTO subscription_payments
+       (user_id, plan_id, amount, phone, payment_reference, status, created_at)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?)`
+    ).bind(
+      user.id,
+      planId,
+      plan.price,
+      user.phone,
+      reference,
+      new Date().toISOString()
+    ).run();
 
     return json({
       ok: true,
       id: result.meta?.last_row_id,
       amount: plan.price,
       status: "pending",
-      message:
-        "درخواست ثبت شد و پس از بررسی مدیر تعیین تکلیف می‌شود."
+      message: "درخواست ثبت شد و پس از بررسی مدیر تعیین تکلیف می‌شود."
     }, 201);
   }
 
   // درخواست‌های اشتراک کاربر
-  if (
-    path === "/api/subscriptions/mine" &&
-    method === "GET"
-  ) {
-    const user =
-      await getUser(request, env);
+  if (path === "/api/subscriptions/mine" && method === "GET") {
+    const user = await getUser(request, env);
 
     if (!user) {
-      return fail(
-        "ابتدا وارد حساب شو.",
-        401
-      );
+      return fail("ابتدا وارد حساب شو.", 401);
     }
 
-    const result =
-      await env.DB.prepare(
-        `SELECT id, plan_id, amount, payment_reference,
-                status, admin_note, created_at, reviewed_at
-         FROM subscription_payments
-         WHERE user_id = ?
-         ORDER BY id DESC
-         LIMIT 30`
-      ).bind(user.id).all();
+    const result = await env.DB.prepare(
+      `SELECT id, plan_id, amount, payment_reference,
+              status, admin_note, created_at, reviewed_at
+       FROM subscription_payments
+       WHERE user_id = ?
+       ORDER BY id DESC
+       LIMIT 30`
+    ).bind(user.id).all();
 
     return json({
       ok: true,
       plan: effectivePlan(user),
-      payments:
-        result.results || []
+      payments: result.results || []
     });
   }
 
   // فهرست درخواست‌های اشتراک برای مدیر
-  if (
-    path === "/api/admin/subscription-payments" &&
-    method === "GET"
-  ) {
-    if (
-      !(await adminAllowed(
-        request,
-        env
-      ))
-    ) {
-      return fail(
-        "دسترسی مدیر مجاز نیست.",
-        403
-      );
+  if (path === "/api/admin/subscription-payments" && method === "GET") {
+    if (!(await adminAllowed(request, env))) {
+      return fail("دسترسی مدیر مجاز نیست.", 403);
     }
 
-    const result =
-      await env.DB.prepare(
-        `SELECT sp.id, sp.user_id,
-                u.phone AS account_phone,
-                sp.plan_id, sp.amount, sp.phone,
-                sp.payment_reference, sp.status,
-                sp.admin_note, sp.created_at, sp.reviewed_at
-         FROM subscription_payments sp
-         JOIN users u ON u.id = sp.user_id
-         ORDER BY
-           CASE
-             WHEN sp.status = 'pending'
-             THEN 0
-             ELSE 1
-           END,
-           sp.id DESC
-         LIMIT 200`
-      ).all();
+    const result = await env.DB.prepare(
+      `SELECT sp.id, sp.user_id, u.phone AS account_phone,
+              sp.plan_id, sp.amount, sp.phone,
+              sp.payment_reference, sp.status,
+              sp.admin_note, sp.created_at, sp.reviewed_at
+       FROM subscription_payments sp
+       JOIN users u ON u.id = sp.user_id
+       ORDER BY
+         CASE WHEN sp.status = 'pending' THEN 0 ELSE 1 END,
+         sp.id DESC
+       LIMIT 200`
+    ).all();
 
     return json({
       ok: true,
-      payments:
-        result.results || []
+      payments: result.results || []
     });
   }
 
   // تأیید یا رد درخواست پرداخت مدیر
-  const reviewMatch =
-    path.match(
-      /^\/api\/admin\/subscription-payments\/(\d+)\/review$/
-    );
+  const reviewMatch = path.match(
+    /^\/api\/admin\/subscription-payments\/(\d+)\/review$/
+  );
 
-  if (
-    reviewMatch &&
-    method === "POST"
-  ) {
-    if (
-      !(await adminAllowed(
-        request,
-        env
-      ))
-    ) {
-      return fail(
-        "دسترسی مدیر مجاز نیست.",
-        403
-      );
+  if (reviewMatch && method === "POST") {
+    if (!(await adminAllowed(request, env))) {
+      return fail("دسترسی مدیر مجاز نیست.", 403);
     }
 
-    const id =
-      Number(reviewMatch[1]);
-
-    const body =
-      await readBody(request);
+    const id = Number(reviewMatch[1]);
+    const body = await readBody(request);
 
     if (!body) {
-      return fail(
-        "اطلاعات بررسی معتبر نیست."
-      );
+      return fail("اطلاعات بررسی معتبر نیست.");
     }
 
-    const decision =
-      String(body.decision || "");
+    const decision = String(body.decision || "");
+    const note = String(body.note || "").trim().slice(0, 500);
 
-    const note =
-      String(body.note || "")
-        .trim()
-        .slice(0, 500);
-
-    if (
-      !["approved", "rejected"]
-        .includes(decision)
-    ) {
-      return fail(
-        "تصمیم باید approved یا rejected باشد."
-      );
+    if (!["approved", "rejected"].includes(decision)) {
+      return fail("تصمیم باید approved یا rejected باشد.");
     }
 
-    const payment =
-      await env.DB.prepare(
-        `SELECT id, user_id, plan_id, amount, status
-         FROM subscription_payments
-         WHERE id = ?`
-      ).bind(id).first();
+    const payment = await env.DB.prepare(
+      `SELECT id, user_id, plan_id, amount, status
+       FROM subscription_payments WHERE id = ?`
+    ).bind(id).first();
 
     if (!payment) {
-      return fail(
-        "درخواست پرداخت پیدا نشد.",
-        404
-      );
+      return fail("درخواست پرداخت پیدا نشد.", 404);
     }
 
-    if (
-      payment.status !== "pending"
-    ) {
-      return fail(
-        "این درخواست قبلاً بررسی شده است.",
-        409
-      );
+    if (payment.status !== "pending") {
+      return fail("این درخواست قبلاً بررسی شده است.", 409);
     }
 
-    const plan =
-      PLANS[payment.plan_id];
+    const plan = PLANS[payment.plan_id];
 
-    if (
-      !plan ||
-      plan.price !== payment.amount ||
-      plan.id === "free"
-    ) {
-      return fail(
-        "مبلغ یا پلن این درخواست معتبر نیست.",
-        409
-      );
+    if (!plan || plan.price !== payment.amount || plan.id === "free") {
+      return fail("مبلغ یا پلن این درخواست معتبر نیست.", 409);
     }
 
-    const reviewedAt =
-      new Date().toISOString();
+    const reviewedAt = new Date().toISOString();
 
-    if (
-      decision === "rejected"
-    ) {
-      const result =
-        await env.DB.prepare(
-          `UPDATE subscription_payments
-           SET status = 'rejected',
-               admin_note = ?,
-               reviewed_at = ?
-           WHERE id = ?
-             AND status = 'pending'`
-        ).bind(
-          note,
-          reviewedAt,
-          id
-        ).run();
+    if (decision === "rejected") {
+      const result = await env.DB.prepare(
+        `UPDATE subscription_payments
+         SET status = 'rejected', admin_note = ?, reviewed_at = ?
+         WHERE id = ? AND status = 'pending'`
+      ).bind(note, reviewedAt, id).run();
 
-      if (
-        !result.meta?.changes
-      ) {
-        return fail(
-          "وضعیت درخواست تغییر کرده است؛ فهرست را دوباره بررسی کن.",
-          409
-        );
+      if (!result.meta?.changes) {
+        return fail("وضعیت درخواست تغییر کرده است؛ فهرست را دوباره بررسی کن.", 409);
       }
 
       return json({
@@ -1311,228 +969,121 @@ async function handle(request, env) {
       });
     }
 
-    const user =
-      await env.DB.prepare(
-        `SELECT subscription_expires_at, plan_id
-         FROM users
-         WHERE id = ?`
-      ).bind(
-        payment.user_id
-      ).first();
+    const user = await env.DB.prepare(
+      `SELECT subscription_expires_at, plan_id
+       FROM users WHERE id = ?`
+    ).bind(payment.user_id).first();
 
     if (!user) {
-      return fail(
-        "حساب کاربر پیدا نشد.",
-        404
-      );
+      return fail("حساب کاربر پیدا نشد.", 404);
     }
 
-    const now =
-      Date.now();
+    const now = Date.now();
+    const oldExpiry = user.subscription_expires_at
+      ? Date.parse(user.subscription_expires_at)
+      : 0;
 
-    const oldExpiry =
-      user.subscription_expires_at
-        ? Date.parse(
-            user.subscription_expires_at
-          )
-        : 0;
+    const start = Math.max(
+      now,
+      Number.isFinite(oldExpiry) ? oldExpiry : 0
+    );
 
-    const start =
-      Math.max(
-        now,
-        Number.isFinite(oldExpiry)
-          ? oldExpiry
-          : 0
-      );
+    const expires = new Date(
+      start + plan.days * 24 * 60 * 60 * 1000
+    ).toISOString();
 
-    const expires =
-      new Date(
-        start +
-        plan.days *
-        24 *
-        60 *
-        60 *
-        1000
-      ).toISOString();
+    const results = await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE subscription_payments
+         SET status = 'approved', admin_note = ?, reviewed_at = ?
+         WHERE id = ? AND status = 'pending'`
+      ).bind(note, reviewedAt, id),
 
-    const results =
-      await env.DB.batch([
-        env.DB.prepare(
-          `UPDATE subscription_payments
-           SET status = 'approved',
-               admin_note = ?,
-               reviewed_at = ?
-           WHERE id = ?
-             AND status = 'pending'`
-        ).bind(
-          note,
-          reviewedAt,
-          id
-        ),
+      env.DB.prepare(
+        `UPDATE users
+         SET plan_id = ?, subscription_expires_at = ?
+         WHERE id = ?
+           AND EXISTS (
+             SELECT 1 FROM subscription_payments
+             WHERE id = ? AND status = 'approved'
+           )`
+      ).bind(plan.id, expires, payment.user_id, id)
+    ]);
 
-        env.DB.prepare(
-          `UPDATE users
-           SET plan_id = ?,
-               subscription_expires_at = ?
-           WHERE id = ?
-             AND EXISTS (
-               SELECT 1
-               FROM subscription_payments
-               WHERE id = ?
-                 AND status = 'approved'
-             )`
-        ).bind(
-          plan.id,
-          expires,
-          payment.user_id,
-          id
-        )
-      ]);
-
-    if (
-      !results[0]?.meta?.changes
-    ) {
-      return fail(
-        "درخواست قبلاً بررسی شده است.",
-        409
-      );
+    if (!results[0]?.meta?.changes) {
+      return fail("درخواست قبلاً بررسی شده است.", 409);
     }
 
     return json({
       ok: true,
-      message:
-        "پرداخت تأیید شد و اشتراک فعال شد.",
+      message: "پرداخت تأیید شد و اشتراک فعال شد.",
       plan: plan.name,
       expiresAt: expires
     });
   }
 
-  return fail(
-    "مسیر API پیدا نشد.",
-    404
-  );
+  return fail("مسیر API پیدا نشد.", 404);
 }
 
 export default {
   async fetch(request, env) {
-    const origin =
-      request.headers.get("Origin");
+    const origin = request.headers.get("Origin");
 
     try {
-      // درخواست‌های پیش‌بررسی مرورگر
-      if (
-        request.method === "OPTIONS"
-      ) {
-        if (
-          origin &&
-          !ALLOWED_ORIGINS.has(origin)
-        ) {
-          return new Response(
-            null,
-            {
-              status: 403,
-              headers: {
-                "Vary": "Origin",
-                "Cache-Control":
-                  "no-store"
-              }
+      if (request.method === "OPTIONS") {
+        if (origin && !ALLOWED_ORIGINS.has(origin)) {
+          return new Response(null, {
+            status: 403,
+            headers: {
+              "Vary": "Origin",
+              "Cache-Control": "no-store"
             }
-          );
+          });
         }
 
-        return new Response(
-          null,
-          {
-            status: 204,
-            headers:
-              getCorsHeaders(origin)
-          }
-        );
+        return new Response(null, {
+          status: 204,
+          headers: getCorsHeaders(origin)
+        });
       }
 
-      // رد کردن مبدأهای غیرمجاز
-      if (
-        origin &&
-        !ALLOWED_ORIGINS.has(origin)
-      ) {
+      if (origin && !ALLOWED_ORIGINS.has(origin)) {
         return new Response(
           JSON.stringify({
             ok: false,
-            error:
-              "مبدأ درخواست مجاز نیست."
+            error: "مبدأ درخواست مجاز نیست."
           }),
           {
             status: 403,
             headers: {
-              "Content-Type":
-                "application/json; charset=utf-8",
-              "Cache-Control":
-                "no-store",
+              "Content-Type": "application/json; charset=utf-8",
+              "Cache-Control": "no-store",
               "Vary": "Origin"
             }
           }
         );
       }
 
-      const response =
-        await handle(
-          request,
-          env
-        );
+      const response = await handle(request, env);
+      const headers = new Headers(response.headers);
 
-      // افزودن هدرهای CORS به پاسخ
-      const headers =
-        new Headers(
-          response.headers
-        );
-
-      for (
-        const [key, value]
-        of Object.entries(
-          getCorsHeaders(origin)
-        )
-      ) {
-        headers.set(
-          key,
-          value
-        );
+      for (const [key, value] of Object.entries(getCorsHeaders(origin))) {
+        headers.set(key, value);
       }
 
-      return new Response(
-        response.body,
-        {
-          status:
-            response.status,
-          statusText:
-            response.statusText,
-          headers
-        }
-      );
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+      });
 
     } catch (error) {
-      console.error(
-        "Freelanso API error:",
-        error
-      );
+      console.error("Freelanso API error:", error);
 
-      const path =
-        new URL(request.url)
-          .pathname
-          .replace(/\/+$/, "") ||
-        "/";
-
-      const message =
-        path === "/api/db-check"
-          ? "خطای بررسی D1 رخ داد. جزئیات در گزارش‌های Worker ثبت شده است."
-          : "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.";
-
-      const headers = {
-        ...getCorsHeaders(origin),
-        "Content-Type":
-          "application/json; charset=utf-8",
-        "Cache-Control":
-          "no-store"
-      };
+      const path = new URL(request.url).pathname.replace(/\/+$/, "") || "/";
+      const message = path === "/api/db-check"
+        ? "خطای بررسی D1 رخ داد. جزئیات در گزارش‌های Worker ثبت شده است."
+        : "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.";
 
       return new Response(
         JSON.stringify({
@@ -1541,7 +1092,11 @@ export default {
         }),
         {
           status: 500,
-          headers
+          headers: {
+            ...getCorsHeaders(origin),
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store"
+          }
         }
       );
     }
