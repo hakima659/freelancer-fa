@@ -127,6 +127,7 @@ function decodeB64url(text) {
 
 /*
  * رمزگذاری رمز عبور با PBKDF2 و SHA-256
+ * ورودی‌های رمزنگاری به ArrayBuffer مستقل تبدیل می‌شوند.
  */
 async function passwordHash(password, salt) {
   const passwordBytes = new TextEncoder().encode(
@@ -143,10 +144,20 @@ async function passwordHash(password, salt) {
     throw new Error("INVALID_SALT");
   }
 
+  const passwordBuffer = passwordBytes.buffer.slice(
+    passwordBytes.byteOffset,
+    passwordBytes.byteOffset + passwordBytes.byteLength
+  );
+
+  const saltBuffer = saltBytes.buffer.slice(
+    saltBytes.byteOffset,
+    saltBytes.byteOffset + saltBytes.byteLength
+  );
+
   const key = await crypto.subtle.importKey(
     "raw",
-    passwordBytes,
-    "PBKDF2",
+    passwordBuffer,
+    { name: "PBKDF2" },
     false,
     ["deriveBits"]
   );
@@ -154,7 +165,7 @@ async function passwordHash(password, salt) {
   const bits = await crypto.subtle.deriveBits(
     {
       name: "PBKDF2",
-      salt: saltBytes,
+      salt: saltBuffer,
       iterations: 120000,
       hash: "SHA-256"
     },
