@@ -1,3 +1,4 @@
+
 const ALLOWED_ORIGINS = new Set([
   "https://hakima659.github.io"
 ]);
@@ -116,29 +117,53 @@ function b64url(bytes) {
 
 function decodeB64url(text) {
   const value = String(text || "");
-  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
 
-  return Uint8Array.from(
-    atob(padded),
-    c => c.charCodeAt(0)
-  );
+  if (!/^[A-Za-z0-9_-]*$/.test(value)) {
+    throw new Error("INVALID_BASE64URL_CHARACTERS");
+  }
+
+  if (value.length % 4 === 1) {
+    throw new Error("INVALID_BASE64URL_LENGTH");
+  }
+
+  const base64 = value
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const padded =
+    base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+
+  let binary;
+
+  try {
+    binary = atob(padded);
+  } catch {
+    throw new Error("BASE64URL_DECODE_FAILED");
+  }
+
+  const out = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    out[i] = binary.charCodeAt(i);
+  }
+
+  return out;
 }
 
 /*
- * رمزگذاری رمز عبور با PBKDF2 و SHA-256
- * ورودی‌های رمزنگاری به ArrayBuffer مستقل تبدیل می‌شوند.
+ * رمزگذاری رمز عبور با PBKDF2 و SHA-256.
+ * الگوریتم و تعداد تکرارها برای سازگاری حفظ شده‌اند.
  */
 async function passwordHash(password, salt) {
   const passwordBytes = new TextEncoder().encode(
     String(password)
   );
 
-  const saltBytes = decodeB64url(String(salt));
-
   if (passwordBytes.length === 0) {
     throw new Error("EMPTY_PASSWORD");
   }
+
+  const saltBytes = decodeB64url(String(salt));
 
   if (saltBytes.length < 16) {
     throw new Error("INVALID_SALT");
@@ -154,24 +179,46 @@ async function passwordHash(password, salt) {
     saltBytes.byteOffset + saltBytes.byteLength
   );
 
-  const key = await crypto.subtle.importKey(
-    "raw",
-    passwordBuffer,
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits"]
-  );
+  let key;
 
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: saltBuffer,
-      iterations: 120000,
-      hash: "SHA-256"
-    },
-    key,
-    256
-  );
+  try {
+    key = await crypto.subtle.importKey(
+      "raw",
+      passwordBuffer,
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits"]
+    );
+  } catch (error) {
+    throw new Error(
+      "PBKDF2_IMPORT_FAILED: " +
+      String(error?.name || "Error") +
+      ": " +
+      String(error?.message || error)
+    );
+  }
+
+  let bits;
+
+  try {
+    bits = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: saltBuffer,
+        iterations: 120000,
+        hash: "SHA-256"
+      },
+      key,
+      256
+    );
+  } catch (error) {
+    throw new Error(
+      "PBKDF2_DERIVE_FAILED: " +
+      String(error?.name || "Error") +
+      ": " +
+      String(error?.message || error)
+    );
+  }
 
   return b64url(new Uint8Array(bits));
 }
@@ -547,12 +594,15 @@ async function handle(request, env) {
       }, 201);
 
     } catch (error) {
+      const errorName = String(error?.name || "UnknownError");
       const errorText = String(error?.message || error);
 
+      // گزارش تشخیصی دقیق؛ رمز عبور یا salt ثبت نمی‌شود.
       console.error(
-        "Freelanso registration failed at stage:",
-        stage,
-        errorText
+        "REGISTER_HASH_FAILED:",
+        "stage=" + stage,
+        "name=" + errorName,
+        "message=" + errorText
       );
 
       if (
@@ -1089,7 +1139,12 @@ export default {
       });
 
     } catch (error) {
-      console.error("Freelanso API error:", error);
+      console.error(
+        "Freelanso API error:",
+        String(error?.name || "UnknownError"),
+        String(error?.message || error),
+        String(error?.stack || "")
+      );
 
       const path = new URL(request.url).pathname.replace(/\/+$/, "") || "/";
       const message = path === "/api/db-check"
