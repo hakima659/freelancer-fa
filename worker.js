@@ -151,6 +151,7 @@ function decodeB64url(text) {
 
 /*
  * رمزگذاری رمز عبور با PBKDF2 و SHA-256.
+ * سقف پشتیبانی‌شده در محیط Worker: 100000 تکرار.
  */
 async function passwordHash(password, salt) {
   const passwordBytes = new TextEncoder().encode(
@@ -177,46 +178,24 @@ async function passwordHash(password, salt) {
     saltBytes.byteOffset + saltBytes.byteLength
   );
 
-  let key;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    passwordBuffer,
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
 
-  try {
-    key = await crypto.subtle.importKey(
-      "raw",
-      passwordBuffer,
-      { name: "PBKDF2" },
-      false,
-      ["deriveBits"]
-    );
-  } catch (error) {
-    throw new Error(
-      "PBKDF2_IMPORT_FAILED: " +
-      String(error?.name || "Error") +
-      ": " +
-      String(error?.message || error)
-    );
-  }
-
-  let bits;
-
-  try {
-    bits = await crypto.subtle.deriveBits(
-      {
-        name: "PBKDF2",
-        salt: saltBuffer,
-        iterations: 120000,
-        hash: "SHA-256"
-      },
-      key,
-      256
-    );
-  } catch (error) {
-    throw new Error(
-      "PBKDF2_DERIVE_FAILED: " +
-      String(error?.name || "Error") +
-      ": " +
-      String(error?.message || error)
-    );
-  }
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: saltBuffer,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    key,
+    256
+  );
 
   return b64url(new Uint8Array(bits));
 }
@@ -595,7 +574,7 @@ async function handle(request, env) {
         console.error("Register did not return a user ID.");
 
         return fail(
-          "حساب ذخیره شد یا شناسه آن دریافت نشد. کد REGISTER_NO_ID",
+          "حساب ایجاد شد، اما شناسه آن دریافت نشد. کد REGISTER_NO_ID",
           500
         );
       }
@@ -625,7 +604,7 @@ async function handle(request, env) {
       const errorText = String(error?.message || error);
 
       console.error(
-        "REGISTER_HASH_FAILED:",
+        "REGISTER_FAILED:",
         "stage=" + stage,
         "name=" + errorName,
         "message=" + errorText
@@ -638,18 +617,8 @@ async function handle(request, env) {
         return fail("این شماره قبلاً ثبت‌نام کرده است.", 409);
       }
 
-      // تشخیص موقت خطای هش؛ رمز عبور یا salt نمایش داده نمی‌شود.
-      if (stage === "hash") {
-        return fail(
-          "DEBUG_REGISTER_HASH: " +
-          errorName +
-          ": " +
-          errorText.slice(0, 180),
-          500
-        );
-      }
-
       const messages = {
+        hash: "ساخت امن رمز عبور ناموفق بود. لطفاً دوباره تلاش کن. کد REGISTER_HASH_FAILED",
         insert: "خطای ثبت حساب در پایگاه داده رخ داد. کد REGISTER_INSERT_FAILED",
         token: "حساب ایجاد شده، اما ساخت توکن ورود خطا داد. کد REGISTER_TOKEN_FAILED"
       };
@@ -693,10 +662,25 @@ async function handle(request, env) {
       return fail("شماره موبایل یا رمز عبور نادرست است.", 401);
     }
 
-    const candidate = await passwordHash(
-      password,
-      user.password_salt
-    );
+    let candidate;
+
+    try {
+      candidate = await passwordHash(
+        password,
+        user.password_salt
+      );
+    } catch (error) {
+      console.error(
+        "LOGIN_HASH_FAILED:",
+        String(error?.name || "UnknownError"),
+        String(error?.message || error)
+      );
+
+      return fail(
+        "بررسی رمز عبور ناموفق بود. کد LOGIN_HASH_FAILED",
+        500
+      );
+    }
 
     if (candidate !== user.password_hash) {
       return fail("شماره موبایل یا رمز عبور نادرست است.", 401);
