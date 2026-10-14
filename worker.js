@@ -1,4 +1,3 @@
-
 const ALLOWED_ORIGINS = new Set([
   "https://hakima659.github.io"
 ]);
@@ -152,7 +151,6 @@ function decodeB64url(text) {
 
 /*
  * رمزگذاری رمز عبور با PBKDF2 و SHA-256.
- * الگوریتم و تعداد تکرارها برای سازگاری حفظ شده‌اند.
  */
 async function passwordHash(password, salt) {
   const passwordBytes = new TextEncoder().encode(
@@ -426,23 +424,49 @@ async function handle(request, env) {
   if (path === "/api/db-check" && method === "GET") {
     const requiredSchema = {
       users: [
-        "id", "phone", "password_hash", "password_salt",
-        "plan_id", "subscription_expires_at", "created_at"
+        "id",
+        "phone",
+        "password_hash",
+        "password_salt",
+        "plan_id",
+        "subscription_expires_at",
+        "created_at"
       ],
       projects: [
-        "id", "title", "category", "budget",
-        "description", "created_at"
+        "id",
+        "title",
+        "category",
+        "budget",
+        "description",
+        "created_at"
       ],
-      project_owners: ["project_id", "user_id"],
+      project_owners: [
+        "project_id",
+        "user_id"
+      ],
       proposals: [
-        "id", "project_id", "freelancer_name",
-        "description", "price", "created_at"
+        "id",
+        "project_id",
+        "freelancer_name",
+        "description",
+        "price",
+        "created_at"
       ],
-      proposal_owners: ["proposal_id", "user_id"],
+      proposal_owners: [
+        "proposal_id",
+        "user_id"
+      ],
       subscription_payments: [
-        "id", "user_id", "plan_id", "amount", "phone",
-        "payment_reference", "status", "admin_note",
-        "created_at", "reviewed_at"
+        "id",
+        "user_id",
+        "plan_id",
+        "amount",
+        "phone",
+        "payment_reference",
+        "status",
+        "admin_note",
+        "created_at",
+        "reviewed_at"
       ]
     };
 
@@ -459,6 +483,7 @@ async function handle(request, env) {
           exists: false,
           missing: required
         };
+
         continue;
       }
 
@@ -530,7 +555,9 @@ async function handle(request, env) {
     const password = String(body.password || "");
 
     if (!validPhone(phone)) {
-      return fail("شماره موبایل باید با 09 شروع شود و ۱۱ رقم داشته باشد.");
+      return fail(
+        "شماره موبایل باید با 09 شروع شود و ۱۱ رقم داشته باشد."
+      );
     }
 
     if (password.length < 8 || password.length > 128) {
@@ -597,7 +624,6 @@ async function handle(request, env) {
       const errorName = String(error?.name || "UnknownError");
       const errorText = String(error?.message || error);
 
-      // گزارش تشخیصی دقیق؛ رمز عبور یا salt ثبت نمی‌شود.
       console.error(
         "REGISTER_HASH_FAILED:",
         "stage=" + stage,
@@ -612,8 +638,18 @@ async function handle(request, env) {
         return fail("این شماره قبلاً ثبت‌نام کرده است.", 409);
       }
 
+      // تشخیص موقت خطای هش؛ رمز عبور یا salt نمایش داده نمی‌شود.
+      if (stage === "hash") {
+        return fail(
+          "DEBUG_REGISTER_HASH: " +
+          errorName +
+          ": " +
+          errorText.slice(0, 180),
+          500
+        );
+      }
+
       const messages = {
-        hash: "خطای ثبت‌نام در مرحله رمزگذاری رمز عبور رخ داد. کد REGISTER_HASH_FAILED",
         insert: "خطای ثبت حساب در پایگاه داده رخ داد. کد REGISTER_INSERT_FAILED",
         token: "حساب ایجاد شده، اما ساخت توکن ورود خطا داد. کد REGISTER_TOKEN_FAILED"
       };
@@ -737,10 +773,14 @@ async function handle(request, env) {
     const budget = Number(body.budget);
 
     if (
-      title.length < 3 || title.length > 150 ||
-      category.length < 2 || category.length > 80 ||
-      description.length < 10 || description.length > 5000 ||
-      !Number.isSafeInteger(budget) || budget < 0
+      title.length < 3 ||
+      title.length > 150 ||
+      category.length < 2 ||
+      category.length > 80 ||
+      description.length < 10 ||
+      description.length > 5000 ||
+      !Number.isSafeInteger(budget) ||
+      budget < 0
     ) {
       return fail("عنوان، دسته‌بندی، توضیحات یا بودجه معتبر نیست.");
     }
@@ -748,7 +788,10 @@ async function handle(request, env) {
     const count = await countProjects(env, user.id);
 
     if (count >= plan.projectLimit) {
-      return fail("سقف ثبت پروژه پلن شما تکمیل شده است. برای ادامه پلن خود را ارتقا بده.", 403);
+      return fail(
+        "سقف ثبت پروژه پلن شما تکمیل شده است. برای ادامه پلن خود را ارتقا بده.",
+        403
+      );
     }
 
     const result = await env.DB.prepare(
@@ -801,9 +844,12 @@ async function handle(request, env) {
     const price = Number(body.price);
 
     if (
-      !Number.isSafeInteger(projectId) || projectId < 1 ||
-      description.length < 10 || description.length > 4000 ||
-      !Number.isSafeInteger(price) || price < 0
+      !Number.isSafeInteger(projectId) ||
+      projectId < 1 ||
+      description.length < 10 ||
+      description.length > 4000 ||
+      !Number.isSafeInteger(price) ||
+      price < 0
     ) {
       return fail("اطلاعات پیشنهاد معتبر نیست.");
     }
@@ -827,7 +873,10 @@ async function handle(request, env) {
     const count = await countProposals(env, user.id);
 
     if (plan.proposalLimit !== null && count >= plan.proposalLimit) {
-      return fail("سقف پیشنهادهای پلن شما تکمیل شده است. پلن خود را ارتقا بده.", 403);
+      return fail(
+        "سقف پیشنهادهای پلن شما تکمیل شده است. پلن خود را ارتقا بده.",
+        403
+      );
     }
 
     const result = await env.DB.prepare(
@@ -892,7 +941,10 @@ async function handle(request, env) {
     ).bind(user.id).first();
 
     if (existing) {
-      return fail("یک درخواست پرداخت شما هنوز در انتظار بررسی است.", 409);
+      return fail(
+        "یک درخواست پرداخت شما هنوز در انتظار بررسی است.",
+        409
+      );
     }
 
     const plan = PLANS[planId];
@@ -1021,7 +1073,10 @@ async function handle(request, env) {
       ).bind(note, reviewedAt, id).run();
 
       if (!result.meta?.changes) {
-        return fail("وضعیت درخواست تغییر کرده است؛ فهرست را دوباره بررسی کن.", 409);
+        return fail(
+          "وضعیت درخواست تغییر کرده است؛ فهرست را دوباره بررسی کن.",
+          409
+        );
       }
 
       return json({
@@ -1040,6 +1095,7 @@ async function handle(request, env) {
     }
 
     const now = Date.now();
+
     const oldExpiry = user.subscription_expires_at
       ? Date.parse(user.subscription_expires_at)
       : 0;
@@ -1147,6 +1203,7 @@ export default {
       );
 
       const path = new URL(request.url).pathname.replace(/\/+$/, "") || "/";
+
       const message = path === "/api/db-check"
         ? "خطای بررسی D1 رخ داد. جزئیات در گزارش‌های Worker ثبت شده است."
         : "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.";
