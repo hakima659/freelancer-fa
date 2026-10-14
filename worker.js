@@ -115,7 +115,7 @@ function b64url(bytes) {
 }
 
 function decodeB64url(text) {
-  const base64 = text
+  const base64 = String(text)
     .replace(/-/g, "+")
     .replace(/_/g, "/");
 
@@ -128,23 +128,36 @@ function decodeB64url(text) {
   );
 }
 
+/*
+ * رمزگذاری رمز عبور
+ * PBKDF2 + SHA-256
+ */
 async function passwordHash(password, salt) {
   const enc = new TextEncoder();
 
+  const passwordBytes = enc.encode(String(password));
+  const saltBytes = decodeB64url(String(salt));
+
   const key = await crypto.subtle.importKey(
     "raw",
-    enc.encode(password),
-    "PBKDF2",
+    passwordBytes.buffer,
+    {
+      name: "PBKDF2"
+    },
     false,
     ["deriveBits"]
   );
 
-  const bits = await crypto.subtle.deriveBits({
-    name: "PBKDF2",
-    salt: decodeB64url(salt),
-    iterations: 120000,
-    hash: "SHA-256"
-  }, key, 256);
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: saltBytes.buffer,
+      iterations: 120000,
+      hash: "SHA-256"
+    },
+    key,
+    256
+  );
 
   return b64url(new Uint8Array(bits));
 }
@@ -345,7 +358,10 @@ async function handle(request, env) {
   }
 
   if (!env.DB) {
-    return fail("اتصال پایگاه داده DB برقرار نیست.", 500);
+    return fail(
+      "اتصال پایگاه داده DB برقرار نیست.",
+      500
+    );
   }
 
   if (path === "/health" && method === "GET") {
@@ -370,6 +386,7 @@ async function handle(request, env) {
         "subscription_expires_at",
         "created_at"
       ],
+
       projects: [
         "id",
         "title",
@@ -378,10 +395,12 @@ async function handle(request, env) {
         "description",
         "created_at"
       ],
+
       project_owners: [
         "project_id",
         "user_id"
       ],
+
       proposals: [
         "id",
         "project_id",
@@ -390,10 +409,12 @@ async function handle(request, env) {
         "price",
         "created_at"
       ],
+
       proposal_owners: [
         "proposal_id",
         "user_id"
       ],
+
       subscription_payments: [
         "id",
         "user_id",
@@ -410,7 +431,10 @@ async function handle(request, env) {
 
     const tables = {};
 
-    for (const [table, required] of Object.entries(requiredSchema)) {
+    for (
+      const [table, required]
+      of Object.entries(requiredSchema)
+    ) {
       const exists = await env.DB.prepare(
         `SELECT name
          FROM sqlite_master
@@ -462,13 +486,17 @@ async function handle(request, env) {
   }
 
   // اطلاعات کارت
-  if (path === "/api/payment-info" && method === "GET") {
+  if (
+    path === "/api/payment-info" &&
+    method === "GET"
+  ) {
     return json({
       ok: true,
       cardHolder:
         env.CARD_HOLDER ||
         env["دارنده کارت"] ||
         "",
+
       cardNumber:
         env.CARD_NUMBER ||
         env["شماره کارت"] ||
@@ -485,17 +513,25 @@ async function handle(request, env) {
   }
 
   // ثبت‌نام
-  if (path === "/api/auth/register" && method === "POST") {
+  if (
+    path === "/api/auth/register" &&
+    method === "POST"
+  ) {
     const secret = getAuthSecret(env);
 
     if (!secret) {
-      return fail("تنظیم رمز تأیید سرور انجام نشده است.", 500);
+      return fail(
+        "تنظیم رمز تأیید سرور انجام نشده است.",
+        500
+      );
     }
 
     const body = await readBody(request);
 
     if (!body) {
-      return fail("اطلاعات ارسالی معتبر نیست.");
+      return fail(
+        "اطلاعات ارسالی معتبر نیست."
+      );
     }
 
     const phone = normalizePhone(body.phone);
@@ -507,24 +543,33 @@ async function handle(request, env) {
       );
     }
 
-    if (password.length < 8 || password.length > 128) {
+    if (
+      password.length < 8 ||
+      password.length > 128
+    ) {
       return fail(
         "رمز عبور باید بین ۸ تا ۱۲۸ نویسه باشد."
       );
     }
 
     const salt = b64url(
-      crypto.getRandomValues(new Uint8Array(16))
+      crypto.getRandomValues(
+        new Uint8Array(16)
+      )
     );
 
     let stage = "hash";
 
     try {
-      const hash = await passwordHash(password, salt);
+      const hash = await passwordHash(
+        password,
+        salt
+      );
 
       stage = "insert";
 
-      const createdAt = new Date().toISOString();
+      const createdAt =
+        new Date().toISOString();
 
       const result = await env.DB.prepare(
         `INSERT INTO users
@@ -538,10 +583,13 @@ async function handle(request, env) {
         createdAt
       ).run();
 
-      const userId = result.meta?.last_row_id;
+      const userId =
+        result.meta?.last_row_id;
 
       if (!userId) {
-        console.error("Register did not return a user ID.");
+        console.error(
+          "Register did not return a user ID."
+        );
 
         return fail(
           "حساب ذخیره شد یا شناسه آن دریافت نشد. کد REGISTER_NO_ID",
@@ -551,23 +599,30 @@ async function handle(request, env) {
 
       stage = "token";
 
-      const token = await signToken({
-        uid: userId,
-        exp: Math.floor(Date.now() / 1000) +
-          60 * 60 * 24 * 7
-      }, secret);
+      const token = await signToken(
+        {
+          uid: userId,
+          exp:
+            Math.floor(Date.now() / 1000) +
+            60 * 60 * 24 * 7
+        },
+        secret
+      );
 
       return json({
         ok: true,
         token,
+
         user: {
           id: userId,
           phone,
           plan_id: "free"
         }
       }, 201);
+
     } catch (error) {
-      const errorText = String(error?.message || error);
+      const errorText =
+        String(error?.message || error);
 
       console.error(
         "Freelanso registration failed at stage:",
@@ -588,35 +643,47 @@ async function handle(request, env) {
       const messages = {
         hash:
           "خطای ثبت‌نام در مرحله رمزگذاری رمز عبور رخ داد. کد REGISTER_HASH_FAILED",
+
         insert:
           "خطای ثبت حساب در پایگاه داده رخ داد. کد REGISTER_INSERT_FAILED",
+
         token:
           "حساب ایجاد شده، اما ساخت توکن ورود خطا داد. کد REGISTER_TOKEN_FAILED"
       };
 
       return fail(
-        messages[stage] || "ثبت‌نام ناموفق بود. کد REGISTER_FAILED",
+        messages[stage] ||
+        "ثبت‌نام ناموفق بود. کد REGISTER_FAILED",
         500
       );
     }
   }
 
   // ورود
-  if (path === "/api/auth/login" && method === "POST") {
+  if (
+    path === "/api/auth/login" &&
+    method === "POST"
+  ) {
     const secret = getAuthSecret(env);
 
     if (!secret) {
-      return fail("تنظیم رمز تأیید سرور انجام نشده است.", 500);
+      return fail(
+        "تنظیم رمز تأیید سرور انجام نشده است.",
+        500
+      );
     }
 
     const body = await readBody(request);
 
     if (!body) {
-      return fail("اطلاعات ارسالی معتبر نیست.");
+      return fail(
+        "اطلاعات ارسالی معتبر نیست."
+      );
     }
 
     const phone = normalizePhone(body.phone);
-    const password = String(body.password || "");
+    const password =
+      String(body.password || "");
 
     if (!validPhone(phone) || !password) {
       return fail(
@@ -639,27 +706,35 @@ async function handle(request, env) {
       );
     }
 
-    const candidate = await passwordHash(
-      password,
-      user.password_salt
-    );
+    const candidate =
+      await passwordHash(
+        password,
+        user.password_salt
+      );
 
-    if (candidate !== user.password_hash) {
+    if (
+      candidate !== user.password_hash
+    ) {
       return fail(
         "شماره موبایل یا رمز عبور نادرست است.",
         401
       );
     }
 
-    const token = await signToken({
-      uid: user.id,
-      exp: Math.floor(Date.now() / 1000) +
-        60 * 60 * 24 * 7
-    }, secret);
+    const token = await signToken(
+      {
+        uid: user.id,
+        exp:
+          Math.floor(Date.now() / 1000) +
+          60 * 60 * 24 * 7
+      },
+      secret
+    );
 
     return json({
       ok: true,
       token,
+
       user: {
         id: user.id,
         phone: user.phone,
@@ -671,11 +746,18 @@ async function handle(request, env) {
   }
 
   // اطلاعات حساب
-  if (path === "/api/auth/me" && method === "GET") {
-    const user = await getUser(request, env);
+  if (
+    path === "/api/auth/me" &&
+    method === "GET"
+  ) {
+    const user =
+      await getUser(request, env);
 
     if (!user) {
-      return fail("برای ادامه وارد حساب شو.", 401);
+      return fail(
+        "برای ادامه وارد حساب شو.",
+        401
+      );
     }
 
     return json({
@@ -686,7 +768,10 @@ async function handle(request, env) {
   }
 
   // فهرست عمومی پروژه‌ها
-  if (path === "/api/projects" && method === "GET") {
+  if (
+    path === "/api/projects" &&
+    method === "GET"
+  ) {
     const result = await env.DB.prepare(
       `SELECT id, title, category, budget,
               description, created_at
@@ -702,8 +787,12 @@ async function handle(request, env) {
   }
 
   // ثبت پروژه
-  if (path === "/api/projects" && method === "POST") {
-    const user = await getUser(request, env);
+  if (
+    path === "/api/projects" &&
+    method === "POST"
+  ) {
+    const user =
+      await getUser(request, env);
 
     if (!user) {
       return fail(
@@ -716,14 +805,22 @@ async function handle(request, env) {
     const body = await readBody(request);
 
     if (!body) {
-      return fail("اطلاعات پروژه معتبر نیست.");
+      return fail(
+        "اطلاعات پروژه معتبر نیست."
+      );
     }
 
-    const title = String(body.title || "").trim();
-    const category = String(body.category || "").trim();
+    const title =
+      String(body.title || "").trim();
+
+    const category =
+      String(body.category || "").trim();
+
     const description =
       String(body.description || "").trim();
-    const budget = Number(body.budget);
+
+    const budget =
+      Number(body.budget);
 
     if (
       title.length < 3 ||
@@ -740,9 +837,15 @@ async function handle(request, env) {
       );
     }
 
-    const count = await countProjects(env, user.id);
+    const count =
+      await countProjects(
+        env,
+        user.id
+      );
 
-    if (count >= plan.projectLimit) {
+    if (
+      count >= plan.projectLimit
+    ) {
       return fail(
         "سقف ثبت پروژه پلن شما تکمیل شده است. برای ادامه پلن خود را ارتقا بده.",
         403
@@ -761,17 +864,24 @@ async function handle(request, env) {
       new Date().toISOString()
     ).run();
 
-    const projectId = result.meta?.last_row_id;
+    const projectId =
+      result.meta?.last_row_id;
 
     if (!projectId) {
-      return fail("پروژه ساخته نشد.", 500);
+      return fail(
+        "پروژه ساخته نشد.",
+        500
+      );
     }
 
     await env.DB.prepare(
       `INSERT INTO project_owners
        (project_id, user_id)
        VALUES (?, ?)`
-    ).bind(projectId, user.id).run();
+    ).bind(
+      projectId,
+      user.id
+    ).run();
 
     return json({
       ok: true,
@@ -781,8 +891,12 @@ async function handle(request, env) {
   }
 
   // ارسال پیشنهاد
-  if (path === "/api/proposals" && method === "POST") {
-    const user = await getUser(request, env);
+  if (
+    path === "/api/proposals" &&
+    method === "POST"
+  ) {
+    const user =
+      await getUser(request, env);
 
     if (!user) {
       return fail(
@@ -795,13 +909,19 @@ async function handle(request, env) {
     const body = await readBody(request);
 
     if (!body) {
-      return fail("اطلاعات پیشنهاد معتبر نیست.");
+      return fail(
+        "اطلاعات پیشنهاد معتبر نیست."
+      );
     }
 
-    const projectId = Number(body.project_id);
+    const projectId =
+      Number(body.project_id);
+
     const description =
       String(body.description || "").trim();
-    const price = Number(body.price);
+
+    const price =
+      Number(body.price);
 
     if (
       !Number.isSafeInteger(projectId) ||
@@ -811,29 +931,43 @@ async function handle(request, env) {
       !Number.isSafeInteger(price) ||
       price < 0
     ) {
-      return fail("اطلاعات پیشنهاد معتبر نیست.");
+      return fail(
+        "اطلاعات پیشنهاد معتبر نیست."
+      );
     }
 
-    const project = await env.DB.prepare(
-      "SELECT id FROM projects WHERE id = ?"
-    ).bind(projectId).first();
+    const project =
+      await env.DB.prepare(
+        "SELECT id FROM projects WHERE id = ?"
+      ).bind(projectId).first();
 
     if (!project) {
-      return fail("پروژه پیدا نشد.", 404);
+      return fail(
+        "پروژه پیدا نشد.",
+        404
+      );
     }
 
-    const owner = await env.DB.prepare(
-      "SELECT user_id FROM project_owners WHERE project_id = ?"
-    ).bind(projectId).first();
+    const owner =
+      await env.DB.prepare(
+        "SELECT user_id FROM project_owners WHERE project_id = ?"
+      ).bind(projectId).first();
 
-    if (owner && owner.user_id === user.id) {
+    if (
+      owner &&
+      owner.user_id === user.id
+    ) {
       return fail(
         "نمی‌توانی برای پروژه خودت پیشنهاد بفرستی.",
         403
       );
     }
 
-    const count = await countProposals(env, user.id);
+    const count =
+      await countProposals(
+        env,
+        user.id
+      );
 
     if (
       plan.proposalLimit !== null &&
@@ -858,17 +992,24 @@ async function handle(request, env) {
       new Date().toISOString()
     ).run();
 
-    const proposalId = result.meta?.last_row_id;
+    const proposalId =
+      result.meta?.last_row_id;
 
     if (!proposalId) {
-      return fail("پیشنهاد ثبت نشد.", 500);
+      return fail(
+        "پیشنهاد ثبت نشد.",
+        500
+      );
     }
 
     await env.DB.prepare(
       `INSERT INTO proposal_owners
        (proposal_id, user_id)
        VALUES (?, ?)`
-    ).bind(proposalId, user.id).run();
+    ).bind(
+      proposalId,
+      user.id
+    ).run();
 
     return json({
       ok: true,
@@ -882,24 +1023,40 @@ async function handle(request, env) {
     path === "/api/subscriptions/request" &&
     method === "POST"
   ) {
-    const user = await getUser(request, env);
+    const user =
+      await getUser(request, env);
 
     if (!user) {
-      return fail("ابتدا وارد حساب شو.", 401);
+      return fail(
+        "ابتدا وارد حساب شو.",
+        401
+      );
     }
 
-    const body = await readBody(request);
+    const body =
+      await readBody(request);
 
     if (!body) {
-      return fail("اطلاعات پرداخت معتبر نیست.");
+      return fail(
+        "اطلاعات پرداخت معتبر نیست."
+      );
     }
 
-    const planId = String(body.plan_id || "");
-    const reference =
-      String(body.payment_reference || "").trim();
+    const planId =
+      String(body.plan_id || "");
 
-    if (!PLANS[planId] || planId === "free") {
-      return fail("پلن انتخاب‌شده معتبر نیست.");
+    const reference =
+      String(
+        body.payment_reference || ""
+      ).trim();
+
+    if (
+      !PLANS[planId] ||
+      planId === "free"
+    ) {
+      return fail(
+        "پلن انتخاب‌شده معتبر نیست."
+      );
     }
 
     if (
@@ -911,12 +1068,14 @@ async function handle(request, env) {
       );
     }
 
-    const existing = await env.DB.prepare(
-      `SELECT id
-       FROM subscription_payments
-       WHERE user_id = ? AND status = 'pending'
-       LIMIT 1`
-    ).bind(user.id).first();
+    const existing =
+      await env.DB.prepare(
+        `SELECT id
+         FROM subscription_payments
+         WHERE user_id = ?
+           AND status = 'pending'
+         LIMIT 1`
+      ).bind(user.id).first();
 
     if (existing) {
       return fail(
@@ -925,21 +1084,23 @@ async function handle(request, env) {
       );
     }
 
-    const plan = PLANS[planId];
+    const plan =
+      PLANS[planId];
 
-    const result = await env.DB.prepare(
-      `INSERT INTO subscription_payments
-       (user_id, plan_id, amount, phone,
-        payment_reference, status, created_at)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?)`
-    ).bind(
-      user.id,
-      planId,
-      plan.price,
-      user.phone,
-      reference,
-      new Date().toISOString()
-    ).run();
+    const result =
+      await env.DB.prepare(
+        `INSERT INTO subscription_payments
+         (user_id, plan_id, amount, phone,
+          payment_reference, status, created_at)
+         VALUES (?, ?, ?, ?, ?, 'pending', ?)`
+      ).bind(
+        user.id,
+        planId,
+        plan.price,
+        user.phone,
+        reference,
+        new Date().toISOString()
+      ).run();
 
     return json({
       ok: true,
@@ -956,25 +1117,31 @@ async function handle(request, env) {
     path === "/api/subscriptions/mine" &&
     method === "GET"
   ) {
-    const user = await getUser(request, env);
+    const user =
+      await getUser(request, env);
 
     if (!user) {
-      return fail("ابتدا وارد حساب شو.", 401);
+      return fail(
+        "ابتدا وارد حساب شو.",
+        401
+      );
     }
 
-    const result = await env.DB.prepare(
-      `SELECT id, plan_id, amount, payment_reference,
-              status, admin_note, created_at, reviewed_at
-       FROM subscription_payments
-       WHERE user_id = ?
-       ORDER BY id DESC
-       LIMIT 30`
-    ).bind(user.id).all();
+    const result =
+      await env.DB.prepare(
+        `SELECT id, plan_id, amount, payment_reference,
+                status, admin_note, created_at, reviewed_at
+         FROM subscription_payments
+         WHERE user_id = ?
+         ORDER BY id DESC
+         LIMIT 30`
+      ).bind(user.id).all();
 
     return json({
       ok: true,
       plan: effectivePlan(user),
-      payments: result.results || []
+      payments:
+        result.results || []
     });
   }
 
@@ -983,76 +1150,120 @@ async function handle(request, env) {
     path === "/api/admin/subscription-payments" &&
     method === "GET"
   ) {
-    if (!(await adminAllowed(request, env))) {
-      return fail("دسترسی مدیر مجاز نیست.", 403);
+    if (
+      !(await adminAllowed(
+        request,
+        env
+      ))
+    ) {
+      return fail(
+        "دسترسی مدیر مجاز نیست.",
+        403
+      );
     }
 
-    const result = await env.DB.prepare(
-      `SELECT sp.id, sp.user_id,
-              u.phone AS account_phone,
-              sp.plan_id, sp.amount, sp.phone,
-              sp.payment_reference, sp.status,
-              sp.admin_note, sp.created_at, sp.reviewed_at
-       FROM subscription_payments sp
-       JOIN users u ON u.id = sp.user_id
-       ORDER BY
-         CASE WHEN sp.status = 'pending' THEN 0 ELSE 1 END,
-         sp.id DESC
-       LIMIT 200`
-    ).all();
+    const result =
+      await env.DB.prepare(
+        `SELECT sp.id, sp.user_id,
+                u.phone AS account_phone,
+                sp.plan_id, sp.amount, sp.phone,
+                sp.payment_reference, sp.status,
+                sp.admin_note, sp.created_at, sp.reviewed_at
+         FROM subscription_payments sp
+         JOIN users u ON u.id = sp.user_id
+         ORDER BY
+           CASE
+             WHEN sp.status = 'pending'
+             THEN 0
+             ELSE 1
+           END,
+           sp.id DESC
+         LIMIT 200`
+      ).all();
 
     return json({
       ok: true,
-      payments: result.results || []
+      payments:
+        result.results || []
     });
   }
 
   // تأیید یا رد درخواست پرداخت مدیر
-  const reviewMatch = path.match(
-    /^\/api\/admin\/subscription-payments\/(\d+)\/review$/
-  );
+  const reviewMatch =
+    path.match(
+      /^\/api\/admin\/subscription-payments\/(\d+)\/review$/
+    );
 
-  if (reviewMatch && method === "POST") {
-    if (!(await adminAllowed(request, env))) {
-      return fail("دسترسی مدیر مجاز نیست.", 403);
+  if (
+    reviewMatch &&
+    method === "POST"
+  ) {
+    if (
+      !(await adminAllowed(
+        request,
+        env
+      ))
+    ) {
+      return fail(
+        "دسترسی مدیر مجاز نیست.",
+        403
+      );
     }
 
-    const id = Number(reviewMatch[1]);
-    const body = await readBody(request);
+    const id =
+      Number(reviewMatch[1]);
+
+    const body =
+      await readBody(request);
 
     if (!body) {
-      return fail("اطلاعات بررسی معتبر نیست.");
+      return fail(
+        "اطلاعات بررسی معتبر نیست."
+      );
     }
 
-    const decision = String(body.decision || "");
-    const note = String(body.note || "")
-      .trim()
-      .slice(0, 500);
+    const decision =
+      String(body.decision || "");
 
-    if (!["approved", "rejected"].includes(decision)) {
+    const note =
+      String(body.note || "")
+        .trim()
+        .slice(0, 500);
+
+    if (
+      !["approved", "rejected"]
+        .includes(decision)
+    ) {
       return fail(
         "تصمیم باید approved یا rejected باشد."
       );
     }
 
-    const payment = await env.DB.prepare(
-      `SELECT id, user_id, plan_id, amount, status
-       FROM subscription_payments
-       WHERE id = ?`
-    ).bind(id).first();
+    const payment =
+      await env.DB.prepare(
+        `SELECT id, user_id, plan_id, amount, status
+         FROM subscription_payments
+         WHERE id = ?`
+      ).bind(id).first();
 
     if (!payment) {
-      return fail("درخواست پرداخت پیدا نشد.", 404);
+      return fail(
+        "درخواست پرداخت پیدا نشد.",
+        404
+      );
     }
 
-    if (payment.status !== "pending") {
+    if (
+      payment.status !== "pending"
+    ) {
       return fail(
         "این درخواست قبلاً بررسی شده است.",
         409
       );
     }
 
-    const plan = PLANS[payment.plan_id];
+    const plan =
+      PLANS[payment.plan_id];
 
     if (
       !plan ||
@@ -1065,18 +1276,29 @@ async function handle(request, env) {
       );
     }
 
-    const reviewedAt = new Date().toISOString();
+    const reviewedAt =
+      new Date().toISOString();
 
-    if (decision === "rejected") {
-      const result = await env.DB.prepare(
-        `UPDATE subscription_payments
-         SET status = 'rejected',
-             admin_note = ?,
-             reviewed_at = ?
-         WHERE id = ? AND status = 'pending'`
-      ).bind(note, reviewedAt, id).run();
+    if (
+      decision === "rejected"
+    ) {
+      const result =
+        await env.DB.prepare(
+          `UPDATE subscription_payments
+           SET status = 'rejected',
+               admin_note = ?,
+               reviewed_at = ?
+           WHERE id = ?
+             AND status = 'pending'`
+        ).bind(
+          note,
+          reviewedAt,
+          id
+        ).run();
 
-      if (!result.meta?.changes) {
+      if (
+        !result.meta?.changes
+      ) {
         return fail(
           "وضعیت درخواست تغییر کرده است؛ فهرست را دوباره بررسی کن.",
           409
@@ -1089,59 +1311,87 @@ async function handle(request, env) {
       });
     }
 
-    const user = await env.DB.prepare(
-      `SELECT subscription_expires_at, plan_id
-       FROM users
-       WHERE id = ?`
-    ).bind(payment.user_id).first();
+    const user =
+      await env.DB.prepare(
+        `SELECT subscription_expires_at, plan_id
+         FROM users
+         WHERE id = ?`
+      ).bind(
+        payment.user_id
+      ).first();
 
     if (!user) {
-      return fail("حساب کاربر پیدا نشد.", 404);
+      return fail(
+        "حساب کاربر پیدا نشد.",
+        404
+      );
     }
 
-    const now = Date.now();
+    const now =
+      Date.now();
 
-    const oldExpiry = user.subscription_expires_at
-      ? Date.parse(user.subscription_expires_at)
-      : 0;
+    const oldExpiry =
+      user.subscription_expires_at
+        ? Date.parse(
+            user.subscription_expires_at
+          )
+        : 0;
 
-    const start = Math.max(
-      now,
-      Number.isFinite(oldExpiry) ? oldExpiry : 0
-    );
+    const start =
+      Math.max(
+        now,
+        Number.isFinite(oldExpiry)
+          ? oldExpiry
+          : 0
+      );
 
-    const expires = new Date(
-      start + plan.days * 24 * 60 * 60 * 1000
-    ).toISOString();
+    const expires =
+      new Date(
+        start +
+        plan.days *
+        24 *
+        60 *
+        60 *
+        1000
+      ).toISOString();
 
-    const results = await env.DB.batch([
-      env.DB.prepare(
-        `UPDATE subscription_payments
-         SET status = 'approved',
-             admin_note = ?,
-             reviewed_at = ?
-         WHERE id = ? AND status = 'pending'`
-      ).bind(note, reviewedAt, id),
+    const results =
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE subscription_payments
+           SET status = 'approved',
+               admin_note = ?,
+               reviewed_at = ?
+           WHERE id = ?
+             AND status = 'pending'`
+        ).bind(
+          note,
+          reviewedAt,
+          id
+        ),
 
-      env.DB.prepare(
-        `UPDATE users
-         SET plan_id = ?,
-             subscription_expires_at = ?
-         WHERE id = ?
-           AND EXISTS (
-             SELECT 1
-             FROM subscription_payments
-             WHERE id = ? AND status = 'approved'
-           )`
-      ).bind(
-        plan.id,
-        expires,
-        payment.user_id,
-        id
-      )
-    ]);
+        env.DB.prepare(
+          `UPDATE users
+           SET plan_id = ?,
+               subscription_expires_at = ?
+           WHERE id = ?
+             AND EXISTS (
+               SELECT 1
+               FROM subscription_payments
+               WHERE id = ?
+                 AND status = 'approved'
+             )`
+        ).bind(
+          plan.id,
+          expires,
+          payment.user_id,
+          id
+        )
+      ]);
 
-    if (!results[0]?.meta?.changes) {
+    if (
+      !results[0]?.meta?.changes
+    ) {
       return fail(
         "درخواست قبلاً بررسی شده است.",
         409
@@ -1150,86 +1400,138 @@ async function handle(request, env) {
 
     return json({
       ok: true,
-      message: "پرداخت تأیید شد و اشتراک فعال شد.",
+      message:
+        "پرداخت تأیید شد و اشتراک فعال شد.",
       plan: plan.name,
       expiresAt: expires
     });
   }
 
-  return fail("مسیر API پیدا نشد.", 404);
+  return fail(
+    "مسیر API پیدا نشد.",
+    404
+  );
 }
 
 export default {
   async fetch(request, env) {
-    const origin = request.headers.get("Origin");
+    const origin =
+      request.headers.get("Origin");
 
     try {
       // درخواست‌های پیش‌بررسی مرورگر
-      if (request.method === "OPTIONS") {
-        if (origin && !ALLOWED_ORIGINS.has(origin)) {
-          return new Response(null, {
-            status: 403,
-            headers: {
-              "Vary": "Origin",
-              "Cache-Control": "no-store"
+      if (
+        request.method === "OPTIONS"
+      ) {
+        if (
+          origin &&
+          !ALLOWED_ORIGINS.has(origin)
+        ) {
+          return new Response(
+            null,
+            {
+              status: 403,
+              headers: {
+                "Vary": "Origin",
+                "Cache-Control":
+                  "no-store"
+              }
             }
-          });
+          );
         }
 
-        return new Response(null, {
-          status: 204,
-          headers: getCorsHeaders(origin)
-        });
+        return new Response(
+          null,
+          {
+            status: 204,
+            headers:
+              getCorsHeaders(origin)
+          }
+        );
       }
 
       // رد کردن مبدأهای غیرمجاز
-      if (origin && !ALLOWED_ORIGINS.has(origin)) {
+      if (
+        origin &&
+        !ALLOWED_ORIGINS.has(origin)
+      ) {
         return new Response(
           JSON.stringify({
             ok: false,
-            error: "مبدأ درخواست مجاز نیست."
+            error:
+              "مبدأ درخواست مجاز نیست."
           }),
           {
             status: 403,
             headers: {
-              "Content-Type": "application/json; charset=utf-8",
-              "Cache-Control": "no-store",
+              "Content-Type":
+                "application/json; charset=utf-8",
+              "Cache-Control":
+                "no-store",
               "Vary": "Origin"
             }
           }
         );
       }
 
-      const response = await handle(request, env);
+      const response =
+        await handle(
+          request,
+          env
+        );
 
       // افزودن هدرهای CORS به پاسخ
-      const headers = new Headers(response.headers);
+      const headers =
+        new Headers(
+          response.headers
+        );
 
-      for (const [key, value] of Object.entries(
-        getCorsHeaders(origin)
-      )) {
-        headers.set(key, value);
+      for (
+        const [key, value]
+        of Object.entries(
+          getCorsHeaders(origin)
+        )
+      ) {
+        headers.set(
+          key,
+          value
+        );
       }
 
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers
-      });
+      return new Response(
+        response.body,
+        {
+          status:
+            response.status,
+          statusText:
+            response.statusText,
+          headers
+        }
+      );
+
     } catch (error) {
-      console.error("Freelanso API error:", error);
+      console.error(
+        "Freelanso API error:",
+        error
+      );
 
-      const path = new URL(request.url).pathname
-        .replace(/\/+$/, "") || "/";
+      const path =
+        new URL(request.url)
+          .pathname
+          .replace(/\/+$/, "") ||
+        "/";
 
-      const message = path === "/api/db-check"
-        ? "خطای بررسی D1 رخ داد. جزئیات در گزارش‌های Worker ثبت شده است."
-        : "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.";
+      const message =
+        path === "/api/db-check"
+          ? "خطای بررسی D1 رخ داد. جزئیات در گزارش‌های Worker ثبت شده است."
+          : "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.";
 
       const headers = {
         ...getCorsHeaders(origin),
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store"
+        "Content-Type":
+          "application/json; charset=utf-8",
+        "Cache-Control":
+          "no-store"
       };
 
       return new Response(
