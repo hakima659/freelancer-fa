@@ -63,7 +63,10 @@ function json(data, status = 200) {
 }
 
 function fail(message, status = 400) {
-  return json({ ok: false, error: message }, status);
+  return json({
+    ok: false,
+    error: message
+  }, status);
 }
 
 function normalizePhone(value) {
@@ -257,7 +260,8 @@ async function getUser(request, env) {
 
   return await env.DB.prepare(
     `SELECT id, phone, plan_id, subscription_expires_at
-     FROM users WHERE id = ?`
+     FROM users
+     WHERE id = ?`
   ).bind(payload.uid).first();
 }
 
@@ -296,7 +300,9 @@ async function readBody(request) {
 
 async function countProjects(env, userId) {
   const row = await env.DB.prepare(
-    "SELECT COUNT(*) AS n FROM project_owners WHERE user_id = ?"
+    `SELECT COUNT(*) AS n
+     FROM project_owners
+     WHERE user_id = ?`
   ).bind(userId).first();
 
   return Number(row?.n || 0);
@@ -304,7 +310,9 @@ async function countProjects(env, userId) {
 
 async function countProposals(env, userId) {
   const row = await env.DB.prepare(
-    "SELECT COUNT(*) AS n FROM proposal_owners WHERE user_id = ?"
+    `SELECT COUNT(*) AS n
+     FROM proposal_owners
+     WHERE user_id = ?`
   ).bind(userId).first();
 
   return Number(row?.n || 0);
@@ -315,7 +323,6 @@ async function handle(request, env) {
   const path = url.pathname.replace(/\/+$/, "") || "/";
   const method = request.method;
 
-  // اصلاح CORS: درخواست OPTIONS قبل از بررسی DB پاسخ داده می‌شود.
   if (method === "OPTIONS") {
     return new Response(null, {
       status: 204,
@@ -327,7 +334,7 @@ async function handle(request, env) {
     return fail("اتصال پایگاه داده DB برقرار نیست.", 500);
   }
 
-  // آزمایش سلامت سرور و اتصال D1
+  // بررسی سلامت سرور و اتصال دیتابیس
   if (path === "/health" && method === "GET") {
     await env.DB.prepare("SELECT 1").first();
 
@@ -335,6 +342,108 @@ async function handle(request, env) {
       ok: true,
       service: "freelanso",
       database: "connected"
+    });
+  }
+
+  // بررسی ساختار واقعی جدول‌ها و ستون‌های D1
+  // این مسیر فقط برای عیب‌یابی است و پس از پایان باید حذف شود.
+  if (path === "/api/db-check" && method === "GET") {
+    const requiredSchema = {
+      users: [
+        "id",
+        "phone",
+        "password_hash",
+        "password_salt",
+        "plan_id",
+        "subscription_expires_at"
+      ],
+      projects: [
+        "id",
+        "title",
+        "category",
+        "budget",
+        "description",
+        "created_at"
+      ],
+      project_owners: [
+        "project_id",
+        "user_id"
+      ],
+      proposals: [
+        "id",
+        "project_id",
+        "freelancer_name",
+        "description",
+        "price"
+      ],
+      proposal_owners: [
+        "proposal_id",
+        "user_id"
+      ],
+      subscription_payments: [
+        "id",
+        "user_id",
+        "plan_id",
+        "amount",
+        "phone",
+        "payment_reference",
+        "status",
+        "admin_note",
+        "created_at",
+        "reviewed_at"
+      ]
+    };
+
+    const tables = {};
+
+    for (const [table, required] of Object.entries(requiredSchema)) {
+      const exists = await env.DB.prepare(
+        `SELECT name
+         FROM sqlite_master
+         WHERE type = 'table' AND name = ?`
+      ).bind(table).first();
+
+      if (!exists) {
+        tables[table] = {
+          exists: false,
+          missing: required
+        };
+
+        continue;
+      }
+
+      const result = await env.DB.prepare(
+        `PRAGMA table_info("${table}")`
+      ).all();
+
+      const actual = (result.results || []).map(
+        column => column.name
+      );
+
+      tables[table] = {
+        exists: true,
+        columns: actual,
+        missing: required.filter(
+          column => !actual.includes(column)
+        )
+      };
+    }
+
+    const problems = Object.entries(tables)
+      .filter(([, info]) =>
+        !info.exists || info.missing.length > 0
+      )
+      .map(([table, info]) => ({
+        table,
+        ...info
+      }));
+
+    return json({
+      ok: problems.length === 0,
+      service: "freelanso",
+      database: "connected",
+      problems,
+      tables
     });
   }
 
@@ -469,7 +578,8 @@ async function handle(request, env) {
     const user = await env.DB.prepare(
       `SELECT id, phone, password_hash, password_salt,
               plan_id, subscription_expires_at
-       FROM users WHERE phone = ?`
+       FROM users
+       WHERE phone = ?`
     ).bind(phone).first();
 
     if (!user) {
@@ -761,7 +871,8 @@ async function handle(request, env) {
     }
 
     const existing = await env.DB.prepare(
-      `SELECT id FROM subscription_payments
+      `SELECT id
+       FROM subscription_payments
        WHERE user_id = ? AND status = 'pending'
        LIMIT 1`
     ).bind(user.id).first();
@@ -938,7 +1049,8 @@ async function handle(request, env) {
 
     const user = await env.DB.prepare(
       `SELECT subscription_expires_at, plan_id
-       FROM users WHERE id = ?`
+       FROM users
+       WHERE id = ?`
     ).bind(payment.user_id).first();
 
     if (!user) {
@@ -1017,7 +1129,6 @@ export default {
         }, 403);
       }
 
-      // پاسخ به OPTIONS پیش از اجرای منطق اصلی سرور
       if (request.method === "OPTIONS") {
         return new Response(null, {
           status: 204,
@@ -1028,6 +1139,18 @@ export default {
       return await handle(request, env);
     } catch (error) {
       console.error("Freelanso API error:", error);
+
+      // نمایش جزئیات فقط برای مسیر موقت عیب‌یابی
+      const path = new URL(request.url).pathname
+        .replace(/\/+$/, "") || "/";
+
+      if (path === "/api/db-check") {
+        return fail(
+          "خطای بررسی D1: " +
+          String(error?.message || error),
+          500
+        );
+      }
 
       return fail(
         "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.",
