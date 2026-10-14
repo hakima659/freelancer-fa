@@ -12,15 +12,20 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:90px}
 body{margin:0;font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--green);line-height:1.9}
-button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+a{color:inherit;text-decoration:none}
 .container{width:min(1120px,calc(100% - 32px));margin:auto}
 .header{background:rgba(255,255,255,.96);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
 .nav{min-height:76px;display:flex;justify-content:space-between;align-items:center;gap:14px}
-.logo{font-size:24px;font-weight:900}.logo span{color:#77951b}
+.logo{font-size:24px;font-weight:900}
+.logo span{color:#77951b}
 .nav-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .btn{border:0;border-radius:13px;padding:10px 17px;font-weight:700;display:inline-flex;justify-content:center;align-items:center;gap:7px;transition:.2s}
-.btn:hover{transform:translateY(-1px)}.btn-primary{background:var(--green);color:white}
-.btn-lime{background:var(--lime);color:var(--green)}.btn-light{background:#f0f3ec;color:var(--green);border:1px solid var(--border)}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--green);color:white}
+.btn-lime{background:var(--lime);color:var(--green)}
+.btn-light{background:#f0f3ec;color:var(--green);border:1px solid var(--border)}
 .btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
 .hero{padding:66px 0 44px;background:radial-gradient(circle at 85% 15%,rgba(217,243,106,.3),transparent 28%),linear-gradient(135deg,#f7f8f3,#edf3e7)}
 .hero-content{max-width:760px;margin:auto;text-align:center}
@@ -29,7 +34,8 @@ h1{font-size:clamp(29px,5vw,48px);line-height:1.5;margin:16px 0 8px}
 .hero p{color:var(--muted);margin:0 auto 25px;max-width:650px}
 .search-box{background:white;border:1px solid var(--border);box-shadow:var(--shadow);border-radius:18px;padding:8px;display:flex;gap:8px;max-width:680px;margin:24px auto 0}
 .search-box input{flex:1;min-width:0;border:0;outline:0;padding:10px;background:transparent}
-.section{padding:44px 0}.section-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:22px}
+.section{padding:44px 0}
+.section-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:22px}
 .section-heading h2{margin:0;font-size:clamp(23px,3vw,31px)}
 .section-heading p{margin:4px 0 0;color:var(--muted);font-size:14px}
 .filters{display:flex;gap:8px;overflow-x:auto;padding:4px 0 15px;margin-bottom:8px}
@@ -59,7 +65,8 @@ h1{font-size:clamp(29px,5vw,48px);line-height:1.5;margin:16px 0 8px}
 .plan-card .btn{width:100%;margin-top:auto}
 .plan-note,.form-help{color:var(--muted);font-size:12px;margin-top:12px}
 .form-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.panel{padding:23px}.panel h3{margin:0 0 15px}
+.panel{padding:23px}
+.panel h3{margin:0 0 15px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .field.full{grid-column:1/-1}
@@ -75,11 +82,19 @@ h1{font-size:clamp(29px,5vw,48px);line-height:1.5;margin:16px 0 8px}
 .hidden{display:none!important}
 @media(max-width:850px){.projects-grid,.plans-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.form-layout{grid-template-columns:1fr}}
 @media(max-width:560px){
-.container{width:min(100% - 22px,1120px)}.nav{min-height:68px}.logo{font-size:21px}
-.nav-actions{gap:5px}.nav-actions .btn{padding:8px 10px;font-size:12px}
-.hero{padding:42px 0 30px}.search-box{flex-direction:column}.search-box .btn{width:100%}
-.section{padding:32px 0}.section-heading{align-items:start;flex-direction:column}
-.projects-grid,.plans-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}
+.container{width:min(100% - 22px,1120px)}
+.nav{min-height:68px}
+.logo{font-size:21px}
+.nav-actions{gap:5px}
+.nav-actions .btn{padding:8px 10px;font-size:12px}
+.hero{padding:42px 0 30px}
+.search-box{flex-direction:column}
+.search-box .btn{width:100%}
+.section{padding:32px 0}
+.section-heading{align-items:start;flex-direction:column}
+.projects-grid,.plans-grid{grid-template-columns:1fr}
+.form-grid{grid-template-columns:1fr}
+.field.full{grid-column:auto}
 }
 </style>
 </head>
@@ -169,6 +184,38 @@ h1{font-size:clamp(29px,5vw,48px);line-height:1.5;margin:16px 0 8px}
   </div>
 </section>
 
+<section class="section hidden" id="proposal-section">
+  <div class="container account-panel">
+    <div class="section-heading">
+      <div>
+        <h2>ارسال پیشنهاد برای پروژه</h2>
+        <p id="proposal-project-title">پروژه انتخاب‌شده</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div id="proposal-status" aria-live="polite"></div>
+      <form id="proposal-form">
+        <div class="form-grid">
+          <div class="field full">
+            <label for="proposal-description">توضیحات پیشنهاد</label>
+            <textarea id="proposal-description" required minlength="10" maxlength="4000" placeholder="توضیح بده چگونه پروژه را انجام می‌دهی..."></textarea>
+          </div>
+          <div class="field full">
+            <label for="proposal-price">مبلغ پیشنهادی (تومان)</label>
+            <input id="proposal-price" type="number" min="0" step="1" required placeholder="مثلاً 2500000">
+          </div>
+          <div class="field full">
+            <div class="inline-actions">
+              <button class="btn btn-primary" id="proposal-submit" type="submit">ثبت پیشنهاد</button>
+              <button class="btn btn-light" id="proposal-cancel" type="button">انصراف</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
 <section class="section" id="plans-section">
   <div class="container">
     <div class="section-heading">
@@ -222,7 +269,12 @@ h1{font-size:clamp(29px,5vw,48px);line-height:1.5;margin:16px 0 8px}
             <div class="field full"><label for="project-title">عنوان پروژه</label><input id="project-title" required maxlength="150" placeholder="مثلاً طراحی سایت فروشگاهی"></div>
             <div class="field"><label for="project-category">دسته‌بندی</label>
               <select id="project-category" required>
-                <option value="برنامه‌نویسی">برنامه‌نویسی</option><option value="طراحی">طراحی</option><option value="تولید محتوا">تولید محتوا</option><option value="ترجمه">ترجمه</option><option value="بازاریابی">بازاریابی</option><option value="سایر">سایر</option>
+                <option value="برنامه‌نویسی">برنامه‌نویسی</option>
+                <option value="طراحی">طراحی</option>
+                <option value="تولید محتوا">تولید محتوا</option>
+                <option value="ترجمه">ترجمه</option>
+                <option value="بازاریابی">بازاریابی</option>
+                <option value="سایر">سایر</option>
               </select>
             </div>
             <div class="field"><label for="project-budget">بودجه (تومان)</label><input id="project-budget" type="number" min="0" step="1" required placeholder="مثلاً 1500000"></div>
@@ -248,6 +300,7 @@ h1{font-size:clamp(29px,5vw,48px);line-height:1.5;margin:16px 0 8px}
 <script>
 const API_BASE = 'https://freelansofce.hakima09360.workers.dev';
 const TOKEN_KEY = 'freelanso_token';
+
 let allProjects = [];
 let activeCategory = 'all';
 let selectedPlan = null;
@@ -258,14 +311,8 @@ function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
 }
 
-/*
- * اصلاح درخواست‌های API:
- * GET بدون بدنه، Content-Type غیرضروری ارسال نمی‌کند.
- * درخواست‌های دارای body همچنان JSON می‌فرستند.
- * خطای شبکه با پیام قابل‌فهم‌تری نمایش داده می‌شود.
- */
 async function apiRequest(path, options = {}) {
-  const headers = { ...(options.headers || {}) };
+  const headers = {...(options.headers || {})};
   const token = getToken();
 
   if (options.body !== undefined && options.body !== null) {
@@ -285,9 +332,7 @@ async function apiRequest(path, options = {}) {
     });
   } catch (error) {
     console.error('API network/CORS error:', path, error);
-    throw new Error(
-      'ارتباط مرورگر با سرور برقرار نشد. اینترنت، آدرس API و تنظیمات CORS سرور را بررسی کن.'
-    );
+    throw new Error('ارتباط با سرور برقرار نشد. اینترنت و تنظیمات CORS را بررسی کن.');
   }
 
   const raw = await response.text();
@@ -300,17 +345,7 @@ async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok || data.ok === false) {
-    if (
-      response.status === 401 &&
-      path !== '/api/auth/login' &&
-      path !== '/api/auth/register'
-    ) {
-      // نشست نامعتبر است؛ کاربر می‌تواند دوباره وارد حساب شود.
-    }
-
-    throw new Error(
-      data.error || data.message || ('خطای سرور: ' + response.status)
-    );
+    throw new Error(data.error || data.message || ('خطای سرور: ' + response.status));
   }
 
   return data;
@@ -318,14 +353,20 @@ async function apiRequest(path, options = {}) {
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
   }[c]));
 }
 
 function showMessage(id, message, isError = false) {
   const el = document.getElementById(id);
   if (!el) return;
+
   el.replaceChildren();
+
   const box = document.createElement('div');
   box.className = 'status-message' + (isError ? ' error' : '');
   box.textContent = message;
@@ -354,6 +395,7 @@ function formatLimit(value) {
 
 function requireLogin(message = 'برای ادامه ابتدا وارد حساب کاربری شو.') {
   if (getToken()) return true;
+
   showMessage('account-status', message, true);
   document.getElementById('account-section').scrollIntoView({behavior:'smooth'});
   document.getElementById('auth-phone').focus();
@@ -363,8 +405,10 @@ function requireLogin(message = 'برای ادامه ابتدا وارد حسا�
 function setSignedIn(user) {
   currentUser = user || null;
   const signed = !!getToken() && !!currentUser;
+
   document.getElementById('auth-forms').classList.toggle('hidden', signed);
   document.getElementById('signed-in').classList.toggle('hidden', !signed);
+
   if (signed) {
     document.getElementById('signed-in-text').textContent =
       'وارد حساب شدی: ' + (currentUser.phone || '') +
@@ -381,6 +425,7 @@ async function refreshAccount() {
   try {
     const data = await apiRequest('/api/auth/me');
     setSignedIn(data.user);
+
     const planName = data.plan && data.plan.name
       ? data.plan.name
       : (data.user.plan_id || 'free');
@@ -392,6 +437,7 @@ async function refreshAccount() {
   } catch (error) {
     localStorage.removeItem(TOKEN_KEY);
     setSignedIn(null);
+
     showMessage(
       'account-status',
       'نشست قبلی معتبر نیست؛ دوباره وارد شو. ' + error.message,
@@ -417,6 +463,7 @@ async function authenticate(mode) {
   const button = document.getElementById(
     mode === 'login' ? 'login-button' : 'register-button'
   );
+
   const oldText = button.textContent;
   button.disabled = true;
   button.textContent = 'لطفاً صبر کن...';
@@ -531,10 +578,13 @@ async function choosePlan(plan) {
   if (!requireLogin('برای خرید اشتراک ابتدا ثبت‌نام کن یا وارد حساب شو.')) return;
 
   selectedPlan = plan;
+
   document.getElementById('selected-plan-title').textContent =
     'پلن انتخاب‌شده: ' + plan.name;
+
   document.getElementById('selected-plan-price').textContent =
     formatToman(plan.price);
+
   document.getElementById('payment-reference').value = '';
   document.getElementById('payment-section').classList.remove('hidden');
   document.getElementById('payment-section').scrollIntoView({behavior:'smooth'});
@@ -726,12 +776,87 @@ function renderProjects() {
 
     card.querySelector('button').addEventListener('click', () => {
       if (!requireLogin('برای ارسال پیشنهاد ابتدا وارد حساب شو.')) return;
-      alert('برای ارسال پیشنهاد، فرم کامل پیشنهاد باید به مسیر /api/proposals متصل شود.');
+
+      const projectId = Number(project.id);
+
+      if (!Number.isSafeInteger(projectId) || projectId < 1) {
+        alert('شناسه پروژه از سرور دریافت نشده است. پروژه‌ها را تازه‌سازی کن.');
+        return;
+      }
+
+      const form = document.getElementById('proposal-form');
+      form.dataset.projectId = String(projectId);
+
+      document.getElementById('proposal-project-title').textContent =
+        'پروژه: ' + String(project.title || project.name || 'بدون عنوان');
+
+      document.getElementById('proposal-description').value = '';
+      document.getElementById('proposal-price').value = '';
+      clearMessage('proposal-status');
+
+      document.getElementById('proposal-section').classList.remove('hidden');
+      document.getElementById('proposal-section').scrollIntoView({behavior:'smooth'});
     });
 
     list.appendChild(card);
   });
 }
+
+document.getElementById('proposal-cancel').addEventListener('click', () => {
+  document.getElementById('proposal-section').classList.add('hidden');
+});
+
+document.getElementById('proposal-form').addEventListener('submit', async function(event) {
+  event.preventDefault();
+
+  if (!requireLogin('برای ارسال پیشنهاد ابتدا وارد حساب شو.')) return;
+
+  const projectId = Number(this.dataset.projectId);
+  const description = document.getElementById('proposal-description').value.trim();
+  const price = Number(document.getElementById('proposal-price').value);
+
+  if (!Number.isSafeInteger(projectId) || projectId < 1) {
+    showMessage('proposal-status', 'شناسه پروژه معتبر نیست. پروژه را دوباره انتخاب کن.', true);
+    return;
+  }
+
+  if (description.length < 10 || description.length > 4000) {
+    showMessage('proposal-status', 'توضیحات پیشنهاد باید بین ۱۰ تا ۴۰۰۰ نویسه باشد.', true);
+    return;
+  }
+
+  if (!Number.isSafeInteger(price) || price < 0) {
+    showMessage('proposal-status', 'مبلغ پیشنهادی معتبر نیست.', true);
+    return;
+  }
+
+  const button = document.getElementById('proposal-submit');
+  button.disabled = true;
+  button.textContent = 'در حال ثبت پیشنهاد...';
+
+  try {
+    const data = await apiRequest('/api/proposals', {
+      method: 'POST',
+      body: JSON.stringify({
+        project_id: projectId,
+        description,
+        price
+      })
+    });
+
+    showMessage(
+      'proposal-status',
+      data.message || ('پیشنهاد ثبت شد. شماره پیشنهاد: ' + (data.id ?? 'ثبت‌شده'))
+    );
+
+    this.reset();
+  } catch (error) {
+    showMessage('proposal-status', 'ثبت پیشنهاد ناموفق بود: ' + error.message, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'ثبت پیشنهاد';
+  }
+});
 
 document.getElementById('login-button').addEventListener('click', () => authenticate('login'));
 document.getElementById('register-button').addEventListener('click', () => authenticate('register'));
