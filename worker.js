@@ -1,4 +1,3 @@
-
 const ALLOWED_ORIGINS = new Set([
   "https://hakima659.github.io"
 ]);
@@ -359,7 +358,7 @@ async function handle(request, env) {
     });
   }
 
-  // بررسی ساختار جدول‌های D1؛ مسیر موقت عیب‌یابی
+  // بررسی ساختار جدول‌های D1
   if (path === "/api/db-check" && method === "GET") {
     const requiredSchema = {
       users: [
@@ -368,7 +367,8 @@ async function handle(request, env) {
         "password_hash",
         "password_salt",
         "plan_id",
-        "subscription_expires_at"
+        "subscription_expires_at",
+        "created_at"
       ],
       projects: [
         "id",
@@ -387,7 +387,8 @@ async function handle(request, env) {
         "project_id",
         "freelancer_name",
         "description",
-        "price"
+        "price",
+        "created_at"
       ],
       proposal_owners: [
         "proposal_id",
@@ -488,7 +489,7 @@ async function handle(request, env) {
     const secret = getAuthSecret(env);
 
     if (!secret) {
-      return fail("تنظیم AUTH_SECRET انجام نشده است.", 500);
+      return fail("تنظیم رمز تأیید سرور انجام نشده است.", 500);
     }
 
     const body = await readBody(request);
@@ -516,20 +517,39 @@ async function handle(request, env) {
       crypto.getRandomValues(new Uint8Array(16))
     );
 
-    const hash = await passwordHash(password, salt);
+    let stage = "hash";
 
     try {
+      const hash = await passwordHash(password, salt);
+
+      stage = "insert";
+
+      const createdAt = new Date().toISOString();
+
       const result = await env.DB.prepare(
         `INSERT INTO users
-         (phone, password_hash, password_salt, plan_id)
-         VALUES (?, ?, ?, 'free')`
-      ).bind(phone, hash, salt).run();
+         (phone, password_hash, password_salt,
+          plan_id, subscription_expires_at, created_at)
+         VALUES (?, ?, ?, 'free', NULL, ?)`
+      ).bind(
+        phone,
+        hash,
+        salt,
+        createdAt
+      ).run();
 
       const userId = result.meta?.last_row_id;
 
       if (!userId) {
-        return fail("ساخت حساب انجام نشد.", 500);
+        console.error("Register did not return a user ID.");
+
+        return fail(
+          "حساب ذخیره شد یا شناسه آن دریافت نشد. کد REGISTER_NO_ID",
+          500
+        );
       }
+
+      stage = "token";
 
       const token = await signToken({
         uid: userId,
@@ -547,14 +567,37 @@ async function handle(request, env) {
         }
       }, 201);
     } catch (error) {
-      if (String(error).includes("UNIQUE")) {
+      const errorText = String(error?.message || error);
+
+      console.error(
+        "Freelanso registration failed at stage:",
+        stage,
+        errorText
+      );
+
+      if (
+        errorText.includes("UNIQUE") ||
+        errorText.includes("users.phone")
+      ) {
         return fail(
           "این شماره قبلاً ثبت‌نام کرده است.",
           409
         );
       }
 
-      throw error;
+      const messages = {
+        hash:
+          "خطای ثبت‌نام در مرحله رمزگذاری رمز عبور رخ داد. کد REGISTER_HASH_FAILED",
+        insert:
+          "خطای ثبت حساب در پایگاه داده رخ داد. کد REGISTER_INSERT_FAILED",
+        token:
+          "حساب ایجاد شده، اما ساخت توکن ورود خطا داد. کد REGISTER_TOKEN_FAILED"
+      };
+
+      return fail(
+        messages[stage] || "ثبت‌نام ناموفق بود. کد REGISTER_FAILED",
+        500
+      );
     }
   }
 
@@ -563,7 +606,7 @@ async function handle(request, env) {
     const secret = getAuthSecret(env);
 
     if (!secret) {
-      return fail("تنظیم AUTH_SECRET انجام نشده است.", 500);
+      return fail("تنظیم رمز تأیید سرور انجام نشده است.", 500);
     }
 
     const body = await readBody(request);
@@ -708,13 +751,14 @@ async function handle(request, env) {
 
     const result = await env.DB.prepare(
       `INSERT INTO projects
-       (title, category, budget, description)
-       VALUES (?, ?, ?, ?)`
+       (title, category, budget, description, created_at)
+       VALUES (?, ?, ?, ?, ?)`
     ).bind(
       title,
       category,
       budget,
-      description
+      description,
+      new Date().toISOString()
     ).run();
 
     const projectId = result.meta?.last_row_id;
@@ -803,13 +847,15 @@ async function handle(request, env) {
 
     const result = await env.DB.prepare(
       `INSERT INTO proposals
-       (project_id, freelancer_name, description, price)
-       VALUES (?, ?, ?, ?)`
+       (project_id, freelancer_name, description,
+        price, created_at)
+       VALUES (?, ?, ?, ?, ?)`
     ).bind(
       projectId,
       user.phone,
       description,
-      price
+      price,
+      new Date().toISOString()
     ).run();
 
     const proposalId = result.meta?.last_row_id;
@@ -884,14 +930,15 @@ async function handle(request, env) {
     const result = await env.DB.prepare(
       `INSERT INTO subscription_payments
        (user_id, plan_id, amount, phone,
-        payment_reference, status)
-       VALUES (?, ?, ?, ?, ?, 'pending')`
+        payment_reference, status, created_at)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?)`
     ).bind(
       user.id,
       planId,
       plan.price,
       user.phone,
-      reference
+      reference,
+      new Date().toISOString()
     ).run();
 
     return json({
@@ -931,7 +978,7 @@ async function handle(request, env) {
     });
   }
 
-  // فهرست درخواست‌های پرداخت برای مدیر
+  // فهرست درخواست‌های اشتراک برای مدیر
   if (
     path === "/api/admin/subscription-payments" &&
     method === "GET"
@@ -1117,7 +1164,7 @@ export default {
     const origin = request.headers.get("Origin");
 
     try {
-      // درخواست‌های preflight مرورگر
+      // درخواست‌های پیش‌بررسی مرورگر
       if (request.method === "OPTIONS") {
         if (origin && !ALLOWED_ORIGINS.has(origin)) {
           return new Response(null, {
@@ -1153,10 +1200,9 @@ export default {
         );
       }
 
-      // اجرای مسیر اصلی API
       const response = await handle(request, env);
 
-      // افزودن هدر CORS به تمام پاسخ‌ها، حتی پاسخ‌های خطا
+      // افزودن هدرهای CORS به پاسخ
       const headers = new Headers(response.headers);
 
       for (const [key, value] of Object.entries(
@@ -1177,8 +1223,7 @@ export default {
         .replace(/\/+$/, "") || "/";
 
       const message = path === "/api/db-check"
-        ? "خطای بررسی D1: " +
-          String(error?.message || error)
+        ? "خطای بررسی D1 رخ داد. جزئیات در گزارش‌های Worker ثبت شده است."
         : "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.";
 
       const headers = {
