@@ -1,12 +1,27 @@
-const ALLOWED_ORIGIN = "https://hakima659.github.io";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Token",
-  "Access-Control-Max-Age": "86400",
-  "Vary": "Origin"
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://hakima659.github.io"
+]);
+
+function getCorsHeaders(origin) {
+  const headers = {
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Admin-Token",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin"
+  };
+
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+}
+
+const CORS_HEADERS = getCorsHeaders(
+  "https://hakima659.github.io"
+);
 
 const PLANS = {
   free: {
@@ -334,7 +349,6 @@ async function handle(request, env) {
     return fail("اتصال پایگاه داده DB برقرار نیست.", 500);
   }
 
-  // بررسی سلامت سرور و اتصال دیتابیس
   if (path === "/health" && method === "GET") {
     await env.DB.prepare("SELECT 1").first();
 
@@ -345,8 +359,7 @@ async function handle(request, env) {
     });
   }
 
-  // بررسی ساختار واقعی جدول‌ها و ستون‌های D1
-  // این مسیر فقط برای عیب‌یابی است و پس از پایان باید حذف شود.
+  // بررسی ساختار جدول‌های D1؛ مسیر موقت عیب‌یابی
   if (path === "/api/db-check" && method === "GET") {
     const requiredSchema = {
       users: [
@@ -471,10 +484,7 @@ async function handle(request, env) {
   }
 
   // ثبت‌نام
-  if (
-    path === "/api/auth/register" &&
-    method === "POST"
-  ) {
+  if (path === "/api/auth/register" && method === "POST") {
     const secret = getAuthSecret(env);
 
     if (!secret) {
@@ -549,10 +559,7 @@ async function handle(request, env) {
   }
 
   // ورود
-  if (
-    path === "/api/auth/login" &&
-    method === "POST"
-  ) {
+  if (path === "/api/auth/login" && method === "POST") {
     const secret = getAuthSecret(env);
 
     if (!secret) {
@@ -620,11 +627,8 @@ async function handle(request, env) {
     });
   }
 
-  // اطلاعات حساب کاربر
-  if (
-    path === "/api/auth/me" &&
-    method === "GET"
-  ) {
+  // اطلاعات حساب
+  if (path === "/api/auth/me" && method === "GET") {
     const user = await getUser(request, env);
 
     if (!user) {
@@ -639,10 +643,7 @@ async function handle(request, env) {
   }
 
   // فهرست عمومی پروژه‌ها
-  if (
-    path === "/api/projects" &&
-    method === "GET"
-  ) {
+  if (path === "/api/projects" && method === "GET") {
     const result = await env.DB.prepare(
       `SELECT id, title, category, budget,
               description, created_at
@@ -657,11 +658,8 @@ async function handle(request, env) {
     });
   }
 
-  // ثبت پروژه جدید
-  if (
-    path === "/api/projects" &&
-    method === "POST"
-  ) {
+  // ثبت پروژه
+  if (path === "/api/projects" && method === "POST") {
     const user = await getUser(request, env);
 
     if (!user) {
@@ -738,11 +736,8 @@ async function handle(request, env) {
     }, 201);
   }
 
-  // ارسال پیشنهاد برای پروژه
-  if (
-    path === "/api/proposals" &&
-    method === "POST"
-  ) {
+  // ارسال پیشنهاد
+  if (path === "/api/proposals" && method === "POST") {
     const user = await getUser(request, env);
 
     if (!user) {
@@ -909,7 +904,7 @@ async function handle(request, env) {
     }, 201);
   }
 
-  // درخواست‌های اشتراک خود کاربر
+  // درخواست‌های اشتراک کاربر
   if (
     path === "/api/subscriptions/mine" &&
     method === "GET"
@@ -965,7 +960,7 @@ async function handle(request, env) {
     });
   }
 
-  // تأیید یا رد درخواست پرداخت توسط مدیر
+  // تأیید یا رد درخواست پرداخت مدیر
   const reviewMatch = path.match(
     /^\/api\/admin\/subscription-payments\/(\d+)\/review$/
   );
@@ -1119,42 +1114,88 @@ async function handle(request, env) {
 
 export default {
   async fetch(request, env) {
+    const origin = request.headers.get("Origin");
+
     try {
-      const origin = request.headers.get("Origin");
-
-      if (origin && origin !== ALLOWED_ORIGIN) {
-        return json({
-          ok: false,
-          error: "مبدأ درخواست مجاز نیست."
-        }, 403);
-      }
-
+      // درخواست‌های preflight مرورگر
       if (request.method === "OPTIONS") {
+        if (origin && !ALLOWED_ORIGINS.has(origin)) {
+          return new Response(null, {
+            status: 403,
+            headers: {
+              "Vary": "Origin",
+              "Cache-Control": "no-store"
+            }
+          });
+        }
+
         return new Response(null, {
           status: 204,
-          headers: CORS_HEADERS
+          headers: getCorsHeaders(origin)
         });
       }
 
-      return await handle(request, env);
-    } catch (error) {
-      console.error("Freelanso API error:", error);
-
-      // نمایش جزئیات فقط برای مسیر موقت عیب‌یابی
-      const path = new URL(request.url).pathname
-        .replace(/\/+$/, "") || "/";
-
-      if (path === "/api/db-check") {
-        return fail(
-          "خطای بررسی D1: " +
-          String(error?.message || error),
-          500
+      // رد کردن مبدأهای غیرمجاز
+      if (origin && !ALLOWED_ORIGINS.has(origin)) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "مبدأ درخواست مجاز نیست."
+          }),
+          {
+            status: 403,
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Cache-Control": "no-store",
+              "Vary": "Origin"
+            }
+          }
         );
       }
 
-      return fail(
-        "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.",
-        500
+      // اجرای مسیر اصلی API
+      const response = await handle(request, env);
+
+      // افزودن هدر CORS به تمام پاسخ‌ها، حتی پاسخ‌های خطا
+      const headers = new Headers(response.headers);
+
+      for (const [key, value] of Object.entries(
+        getCorsHeaders(origin)
+      )) {
+        headers.set(key, value);
+      }
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+      });
+    } catch (error) {
+      console.error("Freelanso API error:", error);
+
+      const path = new URL(request.url).pathname
+        .replace(/\/+$/, "") || "/";
+
+      const message = path === "/api/db-check"
+        ? "خطای بررسی D1: " +
+          String(error?.message || error)
+        : "خطای داخلی سرور رخ داد. تنظیمات و جدول‌های D1 را بررسی کن.";
+
+      const headers = {
+        ...getCorsHeaders(origin),
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store"
+      };
+
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: message
+        }),
+        {
+          status: 500,
+          headers
+        }
       );
     }
   }
