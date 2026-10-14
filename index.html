@@ -1,985 +1,683 @@
-
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#123c32">
-  <meta name="description" content="فریلنسو؛ پلتفرم فارسی ثبت پروژه و همکاری کارفرما با فریلنسر">
-  <title>فریلنسو | پلتفرم فریلنسری</title>
-
-  <style>
-    :root {
-      --green: #123c32;
-      --lime: #d9f36a;
-      --bg: #f7f8f3;
-      --white: #fff;
-      --muted: #69736e;
-      --border: #e4e9e2;
-      --danger: #b42318;
-      --shadow: 0 12px 35px rgba(18, 60, 50, .08);
-    }
-
-    * { box-sizing: border-box; }
-
-    html {
-      scroll-behavior: smooth;
-      scroll-padding-top: 90px;
-    }
-
-    body {
-      margin: 0;
-      font-family: Tahoma, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--green);
-      line-height: 1.9;
-    }
-
-    button, input, select, textarea {
-      font: inherit;
-    }
-
-    button { cursor: pointer; }
-
-    a { color: inherit; text-decoration: none; }
-
-    .container {
-      width: min(1120px, calc(100% - 32px));
-      margin: auto;
-    }
-
-    .header {
-      background: rgba(255,255,255,.96);
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      backdrop-filter: blur(12px);
-    }
-
-    .nav {
-      min-height: 76px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .logo {
-      font-size: 24px;
-      font-weight: 900;
-      letter-spacing: -.5px;
-    }
-
-    .logo span { color: #77951b; }
-
-    .nav-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      border: 0;
-      border-radius: 13px;
-      padding: 10px 17px;
-      font-weight: 700;
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      gap: 7px;
-      transition: .2s;
-    }
-
-    .btn:hover { transform: translateY(-1px); }
-
-    .btn-primary {
-      background: var(--green);
-      color: white;
-    }
-
-    .btn-lime {
-      background: var(--lime);
-      color: var(--green);
-    }
-
-    .btn-light {
-      background: #f0f3ec;
-      color: var(--green);
-      border: 1px solid var(--border);
-    }
-
-    .btn:disabled {
-      opacity: .6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .hero {
-      padding: 66px 0 44px;
-      background:
-        radial-gradient(circle at 85% 15%, rgba(217,243,106,.3), transparent 28%),
-        linear-gradient(135deg, #f7f8f3, #edf3e7);
-    }
-
-    .hero-content {
-      max-width: 760px;
-      margin: auto;
-      text-align: center;
-    }
-
-    .eyebrow {
-      display: inline-block;
-      padding: 5px 13px;
-      background: #e8efda;
-      border-radius: 30px;
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    h1 {
-      font-size: clamp(29px, 5vw, 48px);
-      line-height: 1.5;
-      margin: 16px 0 8px;
-    }
-
-    .hero p {
-      color: var(--muted);
-      margin: 0 auto 25px;
-      max-width: 650px;
-    }
-
-    .search-box {
-      background: white;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      border-radius: 18px;
-      padding: 8px;
-      display: flex;
-      gap: 8px;
-      max-width: 680px;
-      margin: 24px auto 0;
-    }
-
-    .search-box input {
-      flex: 1;
-      min-width: 0;
-      border: 0;
-      outline: 0;
-      padding: 10px;
-      background: transparent;
-    }
-
-    .section {
-      padding: 44px 0;
-    }
-
-    .section-heading {
-      display: flex;
-      justify-content: space-between;
-      align-items: end;
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-
-    .section-heading h2 {
-      margin: 0;
-      font-size: clamp(23px, 3vw, 31px);
-    }
-
-    .section-heading p {
-      margin: 4px 0 0;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .filters {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding: 4px 0 15px;
-      margin-bottom: 8px;
-    }
-
-    .filter-btn {
-      flex: 0 0 auto;
-      border: 1px solid var(--border);
-      background: white;
-      color: var(--green);
-      padding: 8px 14px;
-      border-radius: 30px;
-    }
-
-    .filter-btn.active {
-      background: var(--green);
-      color: white;
-      border-color: var(--green);
-    }
-
-    .projects-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 17px;
-    }
-
-    .project-card, .plan-card, .panel {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-    }
-
-    .project-card {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .project-card h3 {
-      font-size: 18px;
-      margin: 0;
-      overflow-wrap: anywhere;
-    }
-
-    .project-card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    .project-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
-      margin-top: auto;
-      padding-top: 5px;
-    }
-
-    .pill {
-      background: #f0f3ec;
-      border-radius: 30px;
-      padding: 4px 10px;
-      font-size: 12px;
-    }
-
-    .empty-state {
-      background: white;
-      border: 1px dashed #cbd5c7;
-      padding: 25px;
-      border-radius: 16px;
-      text-align: center;
-      color: var(--muted);
-      grid-column: 1 / -1;
-    }
-
-    .status-message {
-      padding: 12px 15px;
-      border-radius: 12px;
-      margin: 12px 0;
-      background: #edf4e6;
-      color: var(--green);
-      overflow-wrap: anywhere;
-    }
-
-    .status-message.error {
-      background: #fff0ee;
-      color: var(--danger);
-    }
-
-    /* بخش پلن‌ها */
-    #plans-section {
-      background: #eef2e8;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .plans-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 17px;
-      align-items: stretch;
-    }
-
-    .plan-card {
-      position: relative;
-      padding: 23px 20px;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-
-    .plan-card.featured {
-      border: 2px solid #a7c74b;
-    }
-
-    .plan-label {
-      display: inline-block;
-      width: fit-content;
-      background: #edf3df;
-      border-radius: 30px;
-      padding: 4px 11px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .plan-card h3 {
-      font-size: 23px;
-      margin: 12px 0 0;
-    }
-
-    .plan-price {
-      font-size: 26px;
-      font-weight: 900;
-      margin: 8px 0 0;
-      overflow-wrap: anywhere;
-    }
-
-    .plan-price small {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 400;
-    }
-
-    .plan-features {
-      list-style: none;
-      padding: 0;
-      margin: 15px 0 22px;
-      color: #46534b;
-      font-size: 14px;
-    }
-
-    .plan-features li {
-      padding: 7px 0;
-      border-bottom: 1px solid #edf0e9;
-    }
-
-    .plan-features li::before {
-      content: "✓";
-      color: #71921b;
-      font-weight: 900;
-      margin-left: 8px;
-    }
-
-    .plan-card .btn {
-      width: 100%;
-      margin-top: auto;
-    }
-
-    .plan-note {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 12px;
-    }
-
-    .form-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    .panel { padding: 23px; }
-
-    .panel h3 { margin: 0 0 15px; }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 13px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-width: 0;
-    }
-
-    .field.full { grid-column: 1 / -1; }
-
-    .field label {
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .field input, .field select, .field textarea {
-      width: 100%;
-      border: 1px solid #dce3d9;
-      border-radius: 12px;
-      padding: 11px 12px;
-      outline: none;
-      background: #fff;
-      color: var(--green);
-    }
-
-    .field input:focus, .field select:focus, .field textarea:focus {
-      border-color: #8aa84b;
-      box-shadow: 0 0 0 3px rgba(217,243,106,.25);
-    }
-
-    .field textarea {
-      resize: vertical;
-      min-height: 120px;
-    }
-
-    .form-help {
-      color: var(--muted);
-      font-size: 12px;
-      margin: 8px 0 0;
-    }
-
-    .footer {
-      padding: 25px 0;
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
-    }
-
-    @media (max-width: 850px) {
-      .projects-grid, .plans-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .form-layout { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 560px) {
-      .container { width: min(100% - 22px, 1120px); }
-
-      .nav { min-height: 68px; }
-
-      .logo { font-size: 21px; }
-
-      .nav-actions { gap: 5px; }
-
-      .nav-actions .btn {
-        padding: 8px 10px;
-        font-size: 12px;
-      }
-
-      .hero { padding: 42px 0 30px; }
-
-      .search-box { flex-direction: column; }
-
-      .search-box .btn { width: 100%; }
-
-      .section { padding: 32px 0; }
-
-      .section-heading {
-        align-items: start;
-        flex-direction: column;
-      }
-
-      .projects-grid, .plans-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .form-grid { grid-template-columns: 1fr; }
-
-      .field.full { grid-column: auto; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123c32">
+<meta name="description" content="فریلنسو؛ پلتفرم فارسی ثبت پروژه و همکاری با فریلنسر">
+<title>فریلنسو | پلتفرم فریلنسری</title>
+<style>
+:root{--green:#123c32;--lime:#d9f36a;--bg:#f7f8f3;--muted:#69736e;--border:#e4e9e2;--danger:#b42318;--shadow:0 12px 35px rgba(18,60,50,.08)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--green);line-height:1.9}
+button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}
+.container{width:min(1120px,calc(100% - 32px));margin:auto}
+.header{background:rgba(255,255,255,.96);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
+.nav{min-height:76px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.logo{font-size:24px;font-weight:900}.logo span{color:#77951b}
+.nav-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:0;border-radius:13px;padding:10px 17px;font-weight:700;display:inline-flex;justify-content:center;align-items:center;gap:7px;transition:.2s}
+.btn:hover{transform:translateY(-1px)}.btn-primary{background:var(--green);color:white}
+.btn-lime{background:var(--lime);color:var(--green)}.btn-light{background:#f0f3ec;color:var(--green);border:1px solid var(--border)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.hero{padding:66px 0 44px;background:radial-gradient(circle at 85% 15%,rgba(217,243,106,.3),transparent 28%),linear-gradient(135deg,#f7f8f3,#edf3e7)}
+.hero-content{max-width:760px;margin:auto;text-align:center}
+.eyebrow{display:inline-block;padding:5px 13px;background:#e8efda;border-radius:30px;font-size:13px;font-weight:700}
+h1{font-size:clamp(29px,5vw,48px);line-height:1.5;margin:16px 0 8px}
+.hero p{color:var(--muted);margin:0 auto 25px;max-width:650px}
+.search-box{background:white;border:1px solid var(--border);box-shadow:var(--shadow);border-radius:18px;padding:8px;display:flex;gap:8px;max-width:680px;margin:24px auto 0}
+.search-box input{flex:1;min-width:0;border:0;outline:0;padding:10px;background:transparent}
+.section{padding:44px 0}.section-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:22px}
+.section-heading h2{margin:0;font-size:clamp(23px,3vw,31px)}
+.section-heading p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.filters{display:flex;gap:8px;overflow-x:auto;padding:4px 0 15px;margin-bottom:8px}
+.filter-btn{flex:0 0 auto;border:1px solid var(--border);background:white;color:var(--green);padding:8px 14px;border-radius:30px}
+.filter-btn.active{background:var(--green);color:white;border-color:var(--green)}
+.projects-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
+.project-card,.plan-card,.panel{background:white;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow)}
+.project-card{padding:20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.project-card h3{font-size:18px;margin:0;overflow-wrap:anywhere}
+.project-card p{margin:0;color:var(--muted);font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.project-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:auto;padding-top:5px}
+.pill{background:#f0f3ec;border-radius:30px;padding:4px 10px;font-size:12px}
+.empty-state{background:white;border:1px dashed #cbd5c7;padding:25px;border-radius:16px;text-align:center;color:var(--muted);grid-column:1/-1}
+.status-message{padding:12px 15px;border-radius:12px;margin:12px 0;background:#edf4e6;color:var(--green);overflow-wrap:anywhere}
+.status-message.error{background:#fff0ee;color:var(--danger)}
+#plans-section{background:#eef2e8;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.plans-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px;align-items:stretch}
+.plan-card{position:relative;padding:23px 20px;display:flex;flex-direction:column;min-width:0}
+.plan-card.featured{border:2px solid #a7c74b}
+.plan-label{display:inline-block;width:fit-content;background:#edf3df;border-radius:30px;padding:4px 11px;font-size:12px;font-weight:700}
+.plan-card h3{font-size:23px;margin:12px 0 0}
+.plan-price{font-size:26px;font-weight:900;margin:8px 0 0;overflow-wrap:anywhere}
+.plan-price small{font-size:12px;color:var(--muted);font-weight:400}
+.plan-features{list-style:none;padding:0;margin:15px 0 22px;color:#46534b;font-size:14px}
+.plan-features li{padding:7px 0;border-bottom:1px solid #edf0e9}
+.plan-features li:before{content:"✓";color:#71921b;font-weight:900;margin-left:8px}
+.plan-card .btn{width:100%;margin-top:auto}
+.plan-note,.form-help{color:var(--muted);font-size:12px;margin-top:12px}
+.form-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.panel{padding:23px}.panel h3{margin:0 0 15px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:13px;font-weight:700}
+.field input,.field select,.field textarea{width:100%;border:1px solid #dce3d9;border-radius:12px;padding:11px 12px;outline:none;background:#fff;color:var(--green)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#8aa84b;box-shadow:0 0 0 3px rgba(217,243,106,.25)}
+.field textarea{resize:vertical;min-height:120px}
+.footer{padding:25px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px;text-align:center}
+.account-panel{max-width:720px;margin:auto}
+.card-info{background:#f0f3ec;border:1px dashed #aab9a4;padding:16px;border-radius:14px;overflow-wrap:anywhere;margin:12px 0}
+.card-number{font-size:20px;font-weight:900;letter-spacing:1px;direction:ltr;display:inline-block}
+.inline-actions{display:flex;gap:8px;flex-wrap:wrap}
+.hidden{display:none!important}
+@media(max-width:850px){.projects-grid,.plans-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.form-layout{grid-template-columns:1fr}}
+@media(max-width:560px){
+.container{width:min(100% - 22px,1120px)}.nav{min-height:68px}.logo{font-size:21px}
+.nav-actions{gap:5px}.nav-actions .btn{padding:8px 10px;font-size:12px}
+.hero{padding:42px 0 30px}.search-box{flex-direction:column}.search-box .btn{width:100%}
+.section{padding:32px 0}.section-heading{align-items:start;flex-direction:column}
+.projects-grid,.plans-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}
+}
+</style>
 </head>
-
 <body>
-  <header class="header">
-    <div class="container nav">
-      <a class="logo" href="#home">فریلنسو<span> ✦</span></a>
+<header class="header">
+  <div class="container nav">
+    <a class="logo" href="#home">فریلنسو<span> ✦</span></a>
+    <nav class="nav-actions" aria-label="ناوبری">
+      <a class="btn btn-light" href="#plans-section">پلن‌ها</a>
+      <a class="btn btn-light" href="#account-section">حساب کاربری</a>
+      <a class="btn btn-primary" href="#new-project">ثبت پروژه</a>
+    </nav>
+  </div>
+</header>
 
-      <nav class="nav-actions" aria-label="ناوبری">
-        <a class="btn btn-light" href="#plans-section">پلن‌ها</a>
-        <a class="btn btn-primary" href="#new-project">ثبت پروژه</a>
-      </nav>
+<main>
+<section class="hero" id="home">
+  <div class="container hero-content">
+    <span class="eyebrow">پلتفرم همکاری و پروژه‌های فارسی</span>
+    <h1>فریلنسو؛ ساده‌تر بگرد، هوشمندانه‌تر انتخاب کن ✨</h1>
+    <p>پروژه مناسب خودت را پیدا کن، مهارت‌هایت را ارائه بده و با کارفرماها برای همکاری ارتباط بگیر.</p>
+    <div class="search-box">
+      <input id="project-search" type="search" placeholder="جست‌وجوی پروژه، مهارت یا عنوان..." aria-label="جست‌وجوی پروژه">
+      <button class="btn btn-lime" type="button" id="search-button">جست‌وجو</button>
     </div>
-  </header>
-
-  <main>
-    <section class="hero" id="home">
-      <div class="container hero-content">
-        <span class="eyebrow">پلتفرم همکاری و پروژه‌های فارسی</span>
-        <h1>فریلنسو؛ ساده‌تر بگرد، هوشمندانه‌تر انتخاب کن ✨</h1>
-        <p>
-          پروژه مناسب خودت را پیدا کن، مهارت‌هایت را ارائه بده
-          و با کارفرماها برای همکاری ارتباط بگیر.
-        </p>
-
-        <div class="search-box">
-          <input
-            id="project-search"
-            type="search"
-            placeholder="جست‌وجوی پروژه، مهارت یا عنوان..."
-            aria-label="جست‌وجوی پروژه"
-          >
-          <button class="btn btn-lime" type="button" onclick="applyFilters()">
-            جست‌وجو
-          </button>
-        </div>
-
-        <div style="margin-top:20px">
-          <a class="btn btn-primary" href="#projects-section">مشاهده پروژه‌ها</a>
-          <a class="btn btn-light" href="#plans-section">مشاهده پلن‌ها</a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="projects-section">
-      <div class="container">
-        <div class="section-heading">
-          <div>
-            <h2>پروژه‌های تازه</h2>
-            <p>پروژه‌ها از سرور فریلنسو دریافت می‌شوند.</p>
-          </div>
-          <button class="btn btn-light" type="button" onclick="loadProjects()">
-            تازه‌سازی
-          </button>
-        </div>
-
-        <div class="filters" id="category-filters">
-          <button class="filter-btn active" type="button" data-category="all">همه</button>
-          <button class="filter-btn" type="button" data-category="برنامه‌نویسی">برنامه‌نویسی</button>
-          <button class="filter-btn" type="button" data-category="طراحی">طراحی</button>
-          <button class="filter-btn" type="button" data-category="تولید محتوا">تولید محتوا</button>
-          <button class="filter-btn" type="button" data-category="ترجمه">ترجمه</button>
-          <button class="filter-btn" type="button" data-category="بازاریابی">بازاریابی</button>
-          <button class="filter-btn" type="button" data-category="سایر">سایر</button>
-        </div>
-
-        <div id="projects-status" aria-live="polite"></div>
-        <div class="projects-grid" id="projects-list">
-          <div class="empty-state">در حال دریافت پروژه‌ها...</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- پلن‌ها مستقیماً از API سرور خوانده می‌شوند -->
-    <section class="section" id="plans-section">
-      <div class="container">
-        <div class="section-heading">
-          <div>
-            <h2>پلن‌های اشتراک فریلنسو</h2>
-            <p>پلن مناسب فعالیتت را انتخاب کن.</p>
-          </div>
-          <button class="btn btn-light" type="button" onclick="loadPlans()">
-            تازه‌سازی پلن‌ها
-          </button>
-        </div>
-
-        <div id="plans-status" aria-live="polite">
-          <div class="status-message">در حال دریافت پلن‌ها از سرور...</div>
-        </div>
-
-        <div class="plans-grid" id="plans-list"></div>
-
-        <p class="plan-note">
-          قیمت‌ها و محدودیت‌ها از سرویس پلن‌های فریلنسو دریافت می‌شوند.
-          انتخاب پلن به‌تنهایی به معنی پرداخت یا فعال شدن اشتراک نیست.
-        </p>
-      </div>
-    </section>
-
-    <section class="section" id="new-project">
-      <div class="container">
-        <div class="section-heading">
-          <div>
-            <h2>ثبت پروژه جدید</h2>
-            <p>مشخصات پروژه را وارد کن تا برای ارسال به سرور آماده شود.</p>
-          </div>
-        </div>
-
-        <div class="form-layout">
-          <div class="panel">
-            <h3>مشخصات پروژه</h3>
-
-            <form id="project-form">
-              <div class="form-grid">
-                <div class="field full">
-                  <label for="project-title">عنوان پروژه</label>
-                  <input id="project-title" name="title" required maxlength="150"
-                    placeholder="مثلاً طراحی سایت فروشگاهی">
-                </div>
-
-                <div class="field">
-                  <label for="project-category">دسته‌بندی</label>
-                  <select id="project-category" name="category" required>
-                    <option value="برنامه‌نویسی">برنامه‌نویسی</option>
-                    <option value="طراحی">طراحی</option>
-                    <option value="تولید محتوا">تولید محتوا</option>
-                    <option value="ترجمه">ترجمه</option>
-                    <option value="بازاریابی">بازاریابی</option>
-                    <option value="سایر">سایر</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="project-budget">بودجه (تومان)</label>
-                  <input id="project-budget" name="budget" type="number"
-                    min="0" required placeholder="مثلاً 1500000">
-                </div>
-
-                <div class="field full">
-                  <label for="project-description">توضیحات پروژه</label>
-                  <textarea id="project-description" name="description"
-                    required maxlength="5000"
-                    placeholder="توضیح بده چه کاری باید انجام شود..."></textarea>
-                </div>
-
-                <div class="field full">
-                  <button class="btn btn-primary" id="project-submit" type="submit">
-                    ارسال پروژه
-                  </button>
-                  <p class="form-help">
-                    ارسال فقط زمانی موفق است که API سرور درخواست را بپذیرد.
-                  </p>
-                </div>
-              </div>
-            </form>
-
-            <div id="project-form-status" aria-live="polite"></div>
-          </div>
-
-          <div class="panel">
-            <h3>قبل از ثبت پروژه</h3>
-            <p>
-              عنوان روشن، توضیحات دقیق و بودجه مشخص به فریلنسرها کمک می‌کند
-              بهتر نیازت را درک کنند.
-            </p>
-            <p>
-              برای جلوگیری از ثبت اطلاعات نادرست، نتیجه ارسال پروژه از پاسخ
-              واقعی سرور بررسی می‌شود.
-            </p>
-            <a class="btn btn-light" href="#plans-section">بررسی پلن‌ها</a>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="container">
-      فریلنسو — بستری برای همکاری کارفرماها و فریلنسرها
+    <div style="margin-top:20px">
+      <a class="btn btn-primary" href="#projects-section">مشاهده پروژه‌ها</a>
+      <a class="btn btn-light" href="#plans-section">مشاهده پلن‌ها</a>
     </div>
-  </footer>
+  </div>
+</section>
 
-  <script>
-    const API_BASE = 'https://freelansofce.hakima09360.workers.dev';
+<section class="section" id="account-section">
+  <div class="container account-panel">
+    <div class="section-heading">
+      <div><h2>حساب کاربری</h2><p>برای ثبت پروژه یا خرید اشتراک وارد حساب شو.</p></div>
+    </div>
+    <div class="panel">
+      <div id="account-status" aria-live="polite"></div>
+      <div id="auth-forms">
+        <div class="form-grid">
+          <div class="field">
+            <label for="auth-phone">شماره موبایل</label>
+            <input id="auth-phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="09xxxxxxxxx">
+          </div>
+          <div class="field">
+            <label for="auth-password">رمز عبور</label>
+            <input id="auth-password" type="password" autocomplete="current-password" minlength="8" maxlength="128" placeholder="حداقل ۸ نویسه">
+          </div>
+        </div>
+        <p class="form-help">برای ثبت‌نام، شماره موبایل و رمز عبور معتبر وارد کن. رمز باید حداقل ۸ نویسه باشد.</p>
+        <div class="inline-actions" style="margin-top:14px">
+          <button class="btn btn-primary" id="login-button" type="button">ورود</button>
+          <button class="btn btn-lime" id="register-button" type="button">ثبت‌نام</button>
+        </div>
+      </div>
+      <div id="signed-in" class="hidden">
+        <p id="signed-in-text"></p>
+        <div class="inline-actions">
+          <button class="btn btn-light" id="refresh-account" type="button">به‌روزرسانی حساب</button>
+          <button class="btn btn-light" id="my-payments-button" type="button">وضعیت درخواست‌های اشتراک</button>
+          <button class="btn btn-light" id="logout-button" type="button">خروج از حساب</button>
+        </div>
+        <div id="my-payments-status" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    let allProjects = [];
-    let activeCategory = 'all';
+<section class="section" id="projects-section">
+  <div class="container">
+    <div class="section-heading">
+      <div><h2>پروژه‌های تازه</h2><p>پروژه‌ها از سرور فریلنسو دریافت می‌شوند.</p></div>
+      <button class="btn btn-light" type="button" id="reload-projects">تازه‌سازی</button>
+    </div>
+    <div class="filters" id="category-filters">
+      <button class="filter-btn active" type="button" data-category="all">همه</button>
+      <button class="filter-btn" type="button" data-category="برنامه‌نویسی">برنامه‌نویسی</button>
+      <button class="filter-btn" type="button" data-category="طراحی">طراحی</button>
+      <button class="filter-btn" type="button" data-category="تولید محتوا">تولید محتوا</button>
+      <button class="filter-btn" type="button" data-category="ترجمه">ترجمه</button>
+      <button class="filter-btn" type="button" data-category="بازاریابی">بازاریابی</button>
+      <button class="filter-btn" type="button" data-category="سایر">سایر</button>
+    </div>
+    <div id="projects-status" aria-live="polite"></div>
+    <div class="projects-grid" id="projects-list"><div class="empty-state">در حال دریافت پروژه‌ها...</div></div>
+  </div>
+</section>
 
-    async function apiRequest(path, options = {}) {
-      const response = await fetch(API_BASE + path, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers || {})
-        }
-      });
+<section class="section" id="plans-section">
+  <div class="container">
+    <div class="section-heading">
+      <div><h2>پلن‌های اشتراک فریلنسو</h2><p>پلن مناسب فعالیتت را انتخاب کن.</p></div>
+      <button class="btn btn-light" type="button" id="reload-plans">تازه‌سازی پلن‌ها</button>
+    </div>
+    <div id="plans-status" aria-live="polite"><div class="status-message">در حال دریافت پلن‌ها از سرور...</div></div>
+    <div class="plans-grid" id="plans-list"></div>
+    <p class="plan-note">قیمت‌ها و محدودیت‌ها از سرور دریافت می‌شوند. اشتراک پولی پس از بررسی پرداخت توسط مدیر فعال خواهد شد.</p>
+  </div>
+</section>
 
-      const raw = await response.text();
-      let data;
+<section class="section hidden" id="payment-section">
+  <div class="container account-panel">
+    <div class="section-heading"><div><h2>پرداخت اشتراک</h2><p>اطلاعات پرداخت را بررسی و درخواستت را ثبت کن.</p></div></div>
+    <div class="panel">
+      <div id="payment-status" aria-live="polite"></div>
+      <h3 id="selected-plan-title">پلن انتخاب‌شده</h3>
+      <p>مبلغ قابل پرداخت: <strong id="selected-plan-price"></strong></p>
+      <div class="card-info">
+        <div>دارنده کارت</div>
+        <strong id="card-holder">در حال دریافت...</strong>
+        <hr style="border:0;border-top:1px solid #dce3d9">
+        <div>شماره کارت</div>
+        <div class="card-number" id="card-number">در حال دریافت...</div>
+        <div style="margin-top:10px"><button class="btn btn-light" id="copy-card" type="button">کپی شماره کارت</button></div>
+      </div>
+      <p class="form-help">پس از پرداخت کارت‌به‌کارت، شماره پیگیری یا شناسه پرداخت را وارد کن. ثبت درخواست به معنی تأیید پرداخت نیست.</p>
+      <form id="payment-form">
+        <div class="field">
+          <label for="payment-reference">شماره پیگیری / شناسه پرداخت</label>
+          <input id="payment-reference" required minlength="3" maxlength="150" placeholder="شماره پیگیری رسید پرداخت">
+        </div>
+        <div class="inline-actions" style="margin-top:14px">
+          <button class="btn btn-primary" id="submit-payment" type="submit">ثبت درخواست اشتراک</button>
+          <button class="btn btn-light" id="cancel-payment" type="button">بازگشت به پلن‌ها</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
 
-      try {
-        data = raw ? JSON.parse(raw) : {};
-      } catch {
-        throw new Error('پاسخ سرور قابل خواندن نیست.');
-      }
-
-      if (!response.ok || data.ok === false) {
-        throw new Error(data.error || data.message || ('خطای سرور: ' + response.status));
-      }
-
-      return data;
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? '').replace(/[&<>"']/g, function(char) {
-        return {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;'
-        }[char];
-      });
-    }
-
-    function showMessage(elementId, message, isError = false) {
-      const element = document.getElementById(elementId);
-      if (!element) return;
-
-      element.innerHTML = '';
-      const box = document.createElement('div');
-      box.className = 'status-message' + (isError ? ' error' : '');
-      box.textContent = message;
-      element.appendChild(box);
-    }
-
-    function formatToman(value) {
-      const amount = Number(value);
-
-      if (!Number.isFinite(amount)) return 'قیمت نامشخص';
-      if (amount === 0) return 'رایگان';
-
-      return amount.toLocaleString('fa-IR') + ' تومان';
-    }
-
-    function formatLimit(value) {
-      if (value === null || value === undefined) return 'نامحدود';
-
-      const amount = Number(value);
-      if (!Number.isFinite(amount)) return 'نامشخص';
-      if (amount >= 1000000) return 'نامحدود';
-
-      return amount.toLocaleString('fa-IR');
-    }
-
-    // دریافت و نمایش پلن‌های واقعی از API
-    async function loadPlans() {
-      const list = document.getElementById('plans-list');
-      list.innerHTML = '';
-
-      showMessage('plans-status', 'در حال دریافت پلن‌ها از سرور...');
-
-      try {
-        const data = await apiRequest('/api/plans');
-        const plans = Array.isArray(data.plans) ? data.plans : [];
-
-        if (!plans.length) {
-          showMessage('plans-status', 'سرور پلنی برنگرداند.', true);
-          return;
-        }
-
-        document.getElementById('plans-status').innerHTML = '';
-
-        plans.forEach(function(plan) {
-          const card = document.createElement('article');
-          card.className = 'plan-card' +
-            (plan.id === 'silver' ? ' featured' : '');
-
-          const projectLimit = formatLimit(plan.projectLimit);
-          const proposalLimit = formatLimit(plan.proposalLimit);
-          const duration = Number(plan.days) === 0
-            ? 'بدون محدودیت زمانی اعلام‌شده'
-            : escapeHtml(plan.days) + ' روز';
-
-          const planName = escapeHtml(plan.name || 'پلن');
-          const planId = escapeHtml(plan.id || '');
-          const price = formatToman(plan.price);
-
-          card.innerHTML = `
-            <span class="plan-label">${plan.id === 'free' ? 'شروع رایگان' :
-              plan.id === 'silver' ? 'پلن ویژه' : 'پلن اشتراک'}</span>
-            <h3>${planName}</h3>
-            <div class="plan-price">${escapeHtml(price)}
-              ${Number(plan.price) > 0 ? '<small> / ' +
-                (Number(plan.days) > 0 ? 'دوره ' + escapeHtml(plan.days) + ' روزه' : 'دوره اشتراک') +
-                '</small>' : ''}
+<section class="section" id="new-project">
+  <div class="container">
+    <div class="section-heading"><div><h2>ثبت پروژه جدید</h2><p>برای ارسال پروژه باید وارد حساب شده باشی.</p></div></div>
+    <div class="form-layout">
+      <div class="panel">
+        <h3>مشخصات پروژه</h3>
+        <form id="project-form">
+          <div class="form-grid">
+            <div class="field full"><label for="project-title">عنوان پروژه</label><input id="project-title" required maxlength="150" placeholder="مثلاً طراحی سایت فروشگاهی"></div>
+            <div class="field"><label for="project-category">دسته‌بندی</label>
+              <select id="project-category" required>
+                <option value="برنامه‌نویسی">برنامه‌نویسی</option><option value="طراحی">طراحی</option><option value="تولید محتوا">تولید محتوا</option><option value="ترجمه">ترجمه</option><option value="بازاریابی">بازاریابی</option><option value="سایر">سایر</option>
+              </select>
             </div>
-            <ul class="plan-features">
-              <li>محدودیت پروژه: ${projectLimit}</li>
-              <li>محدودیت پیشنهاد: ${proposalLimit}</li>
-              <li>مدت پلن: ${duration}</li>
-            </ul>
-            <button class="btn ${plan.id === 'silver' ? 'btn-lime' : 'btn-primary'}"
-              type="button" data-plan-id="${planId}">
-              ${plan.id === 'free' ? 'انتخاب پلن رایگان' : 'انتخاب ' + planName}
-            </button>
-          `;
-
-          const button = card.querySelector('button');
-          button.addEventListener('click', function() {
-            choosePlan(plan.id, plan.name, plan.price);
-          });
-
-          list.appendChild(card);
-        });
-      } catch (error) {
-        showMessage(
-          'plans-status',
-          'دریافت پلن‌ها ناموفق بود: ' + (error.message || 'خطای ناشناخته') +
-          ' — اتصال API و تنظیمات CORS را بررسی کن.',
-          true
-        );
-      }
-    }
-
-    // فعلاً فقط انتخاب را اعلام می‌کند؛ پرداخت یا اشتراک را فعال نمی‌کند.
-    function choosePlan(id, name, price) {
-      const message = id === 'free'
-        ? 'پلن رایگان انتخاب شد؛ برای فعال‌سازی آن باید API حساب کاربری و ثبت اشتراک متصل باشد.'
-        : 'پلن «' + name + '» با قیمت ' + formatToman(price) +
-          ' انتخاب شد. برای خرید واقعی، مسیر پرداخت و ثبت اشتراک باید در سرور پیاده‌سازی و متصل شود.';
-
-      alert(message);
-    }
-
-    async function loadProjects() {
-      const list = document.getElementById('projects-list');
-      list.innerHTML = '<div class="empty-state">در حال دریافت پروژه‌ها...</div>';
-
-      try {
-        const data = await apiRequest('/api/projects');
-        const projects = Array.isArray(data)
-          ? data
-          : Array.isArray(data.projects)
-            ? data.projects
-            : Array.isArray(data.data)
-              ? data.data
-              : [];
-
-        allProjects = projects;
-        renderProjects();
-        document.getElementById('projects-status').innerHTML = '';
-      } catch (error) {
-        list.innerHTML = '';
-        const empty = document.createElement('div');
-        empty.className = 'empty-state';
-        empty.textContent = 'دریافت پروژه‌ها ناموفق بود: ' +
-          (error.message || 'خطای اتصال به سرور');
-        list.appendChild(empty);
-      }
-    }
-
-    function renderProjects() {
-      const list = document.getElementById('projects-list');
-      const search = document.getElementById('project-search').value
-        .trim().toLowerCase();
-
-      const filtered = allProjects.filter(function(project) {
-        const title = String(project.title || project.name || '');
-        const description = String(project.description || '');
-        const category = String(project.category || '');
-
-        const matchesSearch = !search ||
-          (title + ' ' + description + ' ' + category).toLowerCase().includes(search);
-
-        const matchesCategory = activeCategory === 'all' ||
-          category === activeCategory;
-
-        return matchesSearch && matchesCategory;
-      });
-
-      list.innerHTML = '';
-
-      if (!filtered.length) {
-        const empty = document.createElement('div');
-        empty.className = 'empty-state';
-        empty.textContent = allProjects.length
-          ? 'پروژه‌ای با این جست‌وجو یا دسته‌بندی پیدا نشد.'
-          : 'هنوز پروژه‌ای برای نمایش وجود ندارد.';
-        list.appendChild(empty);
-        return;
-      }
-
-      filtered.forEach(function(project) {
-        const card = document.createElement('article');
-        card.className = 'project-card';
-
-        const title = escapeHtml(project.title || project.name || 'پروژه بدون عنوان');
-        const description = escapeHtml(project.description || 'توضیحی ثبت نشده است.');
-        const category = escapeHtml(project.category || 'سایر');
-
-        const budgetValue = project.budget ?? project.price ?? project.amount;
-        const budget = budgetValue === undefined || budgetValue === null || budgetValue === ''
-          ? 'توافقی'
-          : formatToman(budgetValue);
-
-        card.innerHTML = `
-          <h3>${title}</h3>
-          <p>${description}</p>
-          <div class="project-meta">
-            <span class="pill">${category}</span>
-            <span class="pill">بودجه: ${escapeHtml(budget)}</span>
+            <div class="field"><label for="project-budget">بودجه (تومان)</label><input id="project-budget" type="number" min="0" step="1" required placeholder="مثلاً 1500000"></div>
+            <div class="field full"><label for="project-description">توضیحات پروژه</label><textarea id="project-description" required maxlength="5000" placeholder="توضیح بده چه کاری باید انجام شود..."></textarea></div>
+            <div class="field full"><button class="btn btn-primary" id="project-submit" type="submit">ارسال پروژه</button></div>
           </div>
-          <button class="btn btn-light" type="button">ارسال پیشنهاد</button>
-        `;
+        </form>
+        <div id="project-form-status" aria-live="polite"></div>
+      </div>
+      <div class="panel">
+        <h3>قبل از ثبت پروژه</h3>
+        <p>عنوان روشن، توضیحات دقیق و بودجه مشخص به فریلنسرها کمک می‌کند بهتر نیازت را درک کنند.</p>
+        <p>پروژه فقط پس از پذیرفته شدن درخواست توسط سرور ثبت می‌شود.</p>
+        <a class="btn btn-light" href="#plans-section">بررسی پلن‌ها</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
 
-        card.querySelector('button').addEventListener('click', function() {
-          sendProposal(project);
-        });
+<footer class="footer"><div class="container">فریلنسو — بستری برای همکاری کارفرماها و فریلنسرها</div></footer>
 
-        list.appendChild(card);
-      });
+<script>
+const API_BASE = 'https://freelansofce.hakima09360.workers.dev';
+const TOKEN_KEY = 'freelanso_token';
+let allProjects = [];
+let activeCategory = 'all';
+let selectedPlan = null;
+let currentUser = null;
+let currentCardNumber = '';
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY) || '';
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = {'Content-Type':'application/json', ...(options.headers || {})};
+  const token = getToken();
+  if (token && !headers.Authorization) headers.Authorization = 'Bearer ' + token;
+
+  const response = await fetch(API_BASE + path, {...options, headers});
+  const raw = await response.text();
+  let data;
+  try { data = raw ? JSON.parse(raw) : {}; }
+  catch { throw new Error('پاسخ سرور قابل خواندن نیست.'); }
+
+  if (!response.ok || data.ok === false) {
+    if (response.status === 401 && path !== '/api/auth/login' && path !== '/api/auth/register') {
+      // نشست منقضی یا نامعتبر است؛ کاربر می‌تواند دوباره وارد شود.
     }
+    throw new Error(data.error || data.message || ('خطای سرور: ' + response.status));
+  }
+  return data;
+}
 
-    function applyFilters() {
-      renderProjects();
-    }
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
 
-    function sendProposal(project) {
-      alert(
-        'ارسال پیشنهاد برای «' + (project.title || project.name || 'این پروژه') +
-        '» هنوز به API ثبت پیشنهاد متصل نشده است.'
-      );
-    }
+function showMessage(id, message, isError = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.replaceChildren();
+  const box = document.createElement('div');
+  box.className = 'status-message' + (isError ? ' error' : '');
+  box.textContent = message;
+  el.appendChild(box);
+}
 
-    document.getElementById('category-filters').addEventListener('click', function(event) {
-      const button = event.target.closest('[data-category]');
-      if (!button) return;
+function clearMessage(id) {
+  const el = document.getElementById(id);
+  if (el) el.replaceChildren();
+}
 
-      activeCategory = button.dataset.category;
+function formatToman(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 'قیمت نامشخص';
+  if (n === 0) return 'رایگان';
+  return n.toLocaleString('fa-IR') + ' تومان';
+}
 
-      document.querySelectorAll('.filter-btn').forEach(function(item) {
-        item.classList.toggle('active', item === button);
-      });
+function formatLimit(value) {
+  if (value === null || value === undefined) return 'نامحدود';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 'نامشخص';
+  if (n >= 1000000) return 'نامحدود';
+  return n.toLocaleString('fa-IR');
+}
 
-      renderProjects();
+function requireLogin(message = 'برای ادامه ابتدا وارد حساب کاربری شو.') {
+  if (getToken()) return true;
+  showMessage('account-status', message, true);
+  document.getElementById('account-section').scrollIntoView({behavior:'smooth'});
+  document.getElementById('auth-phone').focus();
+  return false;
+}
+
+function setSignedIn(user) {
+  currentUser = user || null;
+  const signed = !!getToken() && !!currentUser;
+  document.getElementById('auth-forms').classList.toggle('hidden', signed);
+  document.getElementById('signed-in').classList.toggle('hidden', !signed);
+  if (signed) {
+    document.getElementById('signed-in-text').textContent =
+      'وارد حساب شدی: ' + (currentUser.phone || '') +
+      ' | پلن فعلی: ' + (currentUser.plan_id || 'free');
+  }
+}
+
+async function refreshAccount() {
+  if (!getToken()) {
+    setSignedIn(null);
+    return;
+  }
+  try {
+    const data = await apiRequest('/api/auth/me');
+    setSignedIn(data.user);
+    const planName = data.plan && data.plan.name ? data.plan.name : (data.user.plan_id || 'free');
+    document.getElementById('signed-in-text').textContent =
+      'وارد حساب شدی: ' + data.user.phone + ' | پلن فعلی: ' + planName;
+    clearMessage('account-status');
+  } catch (error) {
+    localStorage.removeItem(TOKEN_KEY);
+    setSignedIn(null);
+    showMessage('account-status', 'نشست قبلی معتبر نیست؛ دوباره وارد شو. ' + error.message, true);
+  }
+}
+
+async function authenticate(mode) {
+  const phone = document.getElementById('auth-phone').value.trim();
+  const password = document.getElementById('auth-password').value;
+
+  if (!/^09\d{9}$/.test(phone)) {
+    showMessage('account-status', 'شماره موبایل باید ۱۱ رقم و با 09 شروع شود.', true);
+    return;
+  }
+  if (password.length < 8 || password.length > 128) {
+    showMessage('account-status', 'رمز عبور باید بین ۸ تا ۱۲۸ نویسه باشد.', true);
+    return;
+  }
+
+  const button = document.getElementById(mode === 'login' ? 'login-button' : 'register-button');
+  const oldText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'لطفاً صبر کن...';
+
+  try {
+    const data = await apiRequest(mode === 'login' ? '/api/auth/login' : '/api/auth/register', {
+      method:'POST',
+      headers:{},
+      body:JSON.stringify({phone, password})
     });
+    if (!data.token) throw new Error('سرور توکن ورود برنگرداند.');
+    localStorage.setItem(TOKEN_KEY, data.token);
+    setSignedIn(data.user);
+    showMessage('account-status', mode === 'login' ? 'ورود موفق بود.' : 'ثبت‌نام موفق بود و حساب ساخته شد.');
+    document.getElementById('auth-password').value = '';
+    await refreshAccount();
+    await loadProjects();
+  } catch (error) {
+    showMessage('account-status', error.message || 'ورود یا ثبت‌نام انجام نشد.', true);
+  } finally {
+    button.disabled = false;
+    button.textContent = oldText;
+  }
+}
 
-    document.getElementById('project-search').addEventListener('input', renderProjects);
-
-    document.getElementById('project-form').addEventListener('submit', async function(event) {
-      event.preventDefault();
-
-      const button = document.getElementById('project-submit');
-      const statusId = 'project-form-status';
-
-      const payload = {
-        title: document.getElementById('project-title').value.trim(),
-        category: document.getElementById('project-category').value,
-        budget: Number(document.getElementById('project-budget').value),
-        description: document.getElementById('project-description').value.trim()
-      };
-
-      if (!payload.title || !payload.description || !Number.isFinite(payload.budget) ||
-          payload.budget < 0) {
-        showMessage(statusId, 'عنوان، توضیحات و بودجه معتبر را وارد کن.', true);
-        return;
-      }
-
-      button.disabled = true;
-      button.textContent = 'در حال ارسال...';
-
-      try {
-        await apiRequest('/api/projects', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-
-        showMessage(statusId, 'پروژه با موفقیت به سرور ارسال شد.');
-        this.reset();
-        await loadProjects();
-      } catch (error) {
-        showMessage(
-          statusId,
-          'ثبت پروژه انجام نشد: ' + (error.message || 'خطای ناشناخته') +
-          '. ساختار درخواست و API سرور را بررسی کن.',
-          true
-        );
-      } finally {
-        button.disabled = false;
-        button.textContent = 'ارسال پروژه';
-      }
+async function loadPlans() {
+  const list = document.getElementById('plans-list');
+  list.replaceChildren();
+  showMessage('plans-status', 'در حال دریافت پلن‌ها از سرور...');
+  try {
+    const data = await apiRequest('/api/plans');
+    const plans = Array.isArray(data.plans) ? data.plans : [];
+    if (!plans.length) {
+      showMessage('plans-status', 'سرور پلنی برنگرداند.', true);
+      return;
+    }
+    clearMessage('plans-status');
+    plans.forEach(plan => {
+      const card = document.createElement('article');
+      card.className = 'plan-card' + (plan.id === 'silver' ? ' featured' : '');
+      const label = plan.id === 'free' ? 'شروع رایگان' : plan.id === 'silver' ? 'پلن ویژه' : 'پلن اشتراک';
+      const duration = Number(plan.days) === 0 ? 'بدون محدودیت زمانی اعلام‌شده' : escapeHtml(plan.days) + ' روز';
+      card.innerHTML = `
+        <span class="plan-label">${label}</span>
+        <h3>${escapeHtml(plan.name || 'پلن')}</h3>
+        <div class="plan-price">${escapeHtml(formatToman(plan.price))}
+          ${Number(plan.price) > 0 ? '<small> / دوره ' + escapeHtml(plan.days) + ' روزه</small>' : ''}
+        </div>
+        <ul class="plan-features">
+          <li>محدودیت پروژه: ${formatLimit(plan.projectLimit)}</li>
+          <li>محدودیت پیشنهاد: ${formatLimit(plan.proposalLimit)}</li>
+          <li>مدت پلن: ${duration}</li>
+        </ul>
+        <button class="btn ${plan.id === 'silver' ? 'btn-lime' : 'btn-primary'}" type="button">
+          ${plan.id === 'free' ? 'انتخاب پلن رایگان' : 'انتخاب ' + escapeHtml(plan.name)}
+        </button>`;
+      card.querySelector('button').addEventListener('click', () => choosePlan(plan));
+      list.appendChild(card);
     });
+  } catch (error) {
+    showMessage('plans-status', 'دریافت پلن‌ها ناموفق بود: ' + error.message, true);
+  }
+}
 
-    // بارگذاری اولیه
-    loadPlans();
-    loadProjects();
-  </script>
+async function choosePlan(plan) {
+  if (plan.id === 'free') {
+    if (!requireLogin('برای استفاده از پلن رایگان ابتدا وارد حساب شو.')) return;
+    try {
+      const data = await apiRequest('/api/auth/me');
+      if (data.user && data.user.plan_id === 'free') {
+        showMessage('account-status', 'حساب تو روی پلن رایگان است. برای فعال شدن پلن پولی، یکی از پلن‌های پولی را انتخاب کن.');
+      } else {
+        showMessage('account-status', 'وضعیت پلن حساب از سرور دریافت شد.');
+      }
+      document.getElementById('account-section').scrollIntoView({behavior:'smooth'});
+    } catch (error) {
+      showMessage('account-status', error.message, true);
+    }
+    return;
+  }
+
+  if (!requireLogin('برای خرید اشتراک ابتدا ثبت‌نام کن یا وارد حساب شو.')) return;
+
+  selectedPlan = plan;
+  document.getElementById('selected-plan-title').textContent = 'پلن انتخاب‌شده: ' + plan.name;
+  document.getElementById('selected-plan-price').textContent = formatToman(plan.price);
+  document.getElementById('payment-reference').value = '';
+  document.getElementById('payment-section').classList.remove('hidden');
+  document.getElementById('payment-section').scrollIntoView({behavior:'smooth'});
+  await loadPaymentInfo();
+}
+
+async function loadPaymentInfo() {
+  showMessage('payment-status', 'در حال دریافت اطلاعات پرداخت...');
+  document.getElementById('card-holder').textContent = 'در حال دریافت...';
+  document.getElementById('card-number').textContent = 'در حال دریافت...';
+  try {
+    const data = await apiRequest('/api/payment-info');
+    if (!data.cardHolder || !data.cardNumber) {
+      throw new Error('اطلاعات کارت در تنظیمات سرور کامل نیست.');
+    }
+    currentCardNumber = String(data.cardNumber).replace(/\s+/g, '');
+    document.getElementById('card-holder').textContent = data.cardHolder;
+    document.getElementById('card-number').textContent = currentCardNumber;
+    clearMessage('payment-status');
+  } catch (error) {
+    currentCardNumber = '';
+    showMessage('payment-status', 'دریافت اطلاعات کارت ناموفق بود: ' + error.message, true);
+  }
+}
+
+async function submitPayment(event) {
+  event.preventDefault();
+  if (!requireLogin()) return;
+  if (!selectedPlan || selectedPlan.id === 'free') {
+    showMessage('payment-status', 'ابتدا یک پلن پولی انتخاب کن.', true);
+    return;
+  }
+  const reference = document.getElementById('payment-reference').value.trim();
+  if (reference.length < 3 || reference.length > 150) {
+    showMessage('payment-status', 'شماره پیگیری معتبر را وارد کن.', true);
+    return;
+  }
+
+  const button = document.getElementById('submit-payment');
+  button.disabled = true;
+  button.textContent = 'در حال ثبت درخواست...';
+  try {
+    const data = await apiRequest('/api/subscriptions/request', {
+      method:'POST',
+      body:JSON.stringify({
+        plan_id:selectedPlan.id,
+        payment_reference:reference
+      })
+    });
+    showMessage('payment-status',
+      'درخواست اشتراک با موفقیت ثبت شد. شماره درخواست: ' +
+      (data.id ?? 'ثبت‌شده') + ' | مبلغ: ' + formatToman(data.amount) +
+      ' | وضعیت: در انتظار بررسی مدیر. اشتراک پس از تأیید فعال می‌شود.');
+    document.getElementById('payment-form').reset();
+    await loadMyPayments();
+  } catch (error) {
+    showMessage('payment-status', 'ثبت درخواست ناموفق بود: ' + error.message, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'ثبت درخواست اشتراک';
+  }
+}
+
+async function loadMyPayments() {
+  if (!requireLogin()) return;
+  const box = document.getElementById('my-payments-status');
+  box.replaceChildren();
+  try {
+    const data = await apiRequest('/api/subscriptions/mine');
+    const payments = Array.isArray(data.payments) ? data.payments : [];
+    if (!payments.length) {
+      showMessage('my-payments-status', 'هنوز درخواست اشتراکی ثبت نکرده‌ای.');
+      return;
+    }
+    const wrapper = document.createElement('div');
+    wrapper.className = 'status-message';
+    const heading = document.createElement('strong');
+    heading.textContent = 'درخواست‌های اشتراک تو';
+    wrapper.appendChild(heading);
+    payments.forEach(item => {
+      const row = document.createElement('p');
+      const plan = item.plan_id || 'نامشخص';
+      const status = item.status === 'approved' ? 'تأیید شده' :
+        item.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی';
+      row.textContent = 'درخواست #' + item.id + ' — پلن ' + plan +
+        ' — مبلغ ' + formatToman(item.amount) + ' — ' + status +
+        (item.admin_note ? ' — توضیح مدیر: ' + item.admin_note : '');
+      wrapper.appendChild(row);
+    });
+    box.appendChild(wrapper);
+  } catch (error) {
+    showMessage('my-payments-status', 'دریافت وضعیت ناموفق بود: ' + error.message, true);
+  }
+}
+
+async function loadProjects() {
+  const list = document.getElementById('projects-list');
+  list.innerHTML = '<div class="empty-state">در حال دریافت پروژه‌ها...</div>';
+  try {
+    const data = await apiRequest('/api/projects');
+    allProjects = Array.isArray(data) ? data :
+      Array.isArray(data.projects) ? data.projects :
+      Array.isArray(data.data) ? data.data : [];
+    renderProjects();
+    clearMessage('projects-status');
+  } catch (error) {
+    list.replaceChildren();
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'دریافت پروژه‌ها ناموفق بود: ' + error.message;
+    list.appendChild(empty);
+  }
+}
+
+function renderProjects() {
+  const list = document.getElementById('projects-list');
+  const search = document.getElementById('project-search').value.trim().toLowerCase();
+  const filtered = allProjects.filter(project => {
+    const title = String(project.title || project.name || '');
+    const description = String(project.description || '');
+    const category = String(project.category || '');
+    const matchesSearch = !search || (title + ' ' + description + ' ' + category).toLowerCase().includes(search);
+    return matchesSearch && (activeCategory === 'all' || category === activeCategory);
+  });
+  list.replaceChildren();
+  if (!filtered.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = allProjects.length ? 'پروژه‌ای با این جست‌وجو یا دسته‌بندی پیدا نشد.' : 'هنوز پروژه‌ای برای نمایش وجود ندارد.';
+    list.appendChild(empty);
+    return;
+  }
+  filtered.forEach(project => {
+    const card = document.createElement('article');
+    card.className = 'project-card';
+    const title = escapeHtml(project.title || project.name || 'پروژه بدون عنوان');
+    const description = escapeHtml(project.description || 'توضیحی ثبت نشده است.');
+    const category = escapeHtml(project.category || 'سایر');
+    const budgetValue = project.budget ?? project.price ?? project.amount;
+    const budget = budgetValue === undefined || budgetValue === null || budgetValue === '' ? 'توافقی' : formatToman(budgetValue);
+    card.innerHTML = `<h3>${title}</h3><p>${description}</p>
+      <div class="project-meta"><span class="pill">${category}</span><span class="pill">بودجه: ${escapeHtml(budget)}</span></div>
+      <button class="btn btn-light" type="button">ارسال پیشنهاد</button>`;
+    card.querySelector('button').addEventListener('click', () => {
+      if (!requireLogin('برای ارسال پیشنهاد ابتدا وارد حساب شو.')) return;
+      alert('برای ارسال پیشنهاد، فرم کامل پیشنهاد باید به مسیر /api/proposals متصل شود.');
+    });
+    list.appendChild(card);
+  });
+}
+
+document.getElementById('login-button').addEventListener('click', () => authenticate('login'));
+document.getElementById('register-button').addEventListener('click', () => authenticate('register'));
+document.getElementById('refresh-account').addEventListener('click', refreshAccount);
+document.getElementById('my-payments-button').addEventListener('click', loadMyPayments);
+document.getElementById('logout-button').addEventListener('click', async () => {
+  localStorage.removeItem(TOKEN_KEY);
+  currentUser = null;
+  setSignedIn(null);
+  clearMessage('account-status');
+  clearMessage('my-payments-status');
+  showMessage('account-status', 'از حساب خارج شدی.');
+  await loadProjects();
+});
+document.getElementById('reload-projects').addEventListener('click', loadProjects);
+document.getElementById('reload-plans').addEventListener('click', loadPlans);
+document.getElementById('search-button').addEventListener('click', renderProjects);
+document.getElementById('project-search').addEventListener('input', renderProjects);
+document.getElementById('payment-form').addEventListener('submit', submitPayment);
+document.getElementById('cancel-payment').addEventListener('click', () => {
+  document.getElementById('payment-section').classList.add('hidden');
+  document.getElementById('plans-section').scrollIntoView({behavior:'smooth'});
+});
+document.getElementById('copy-card').addEventListener('click', async () => {
+  if (!currentCardNumber) {
+    showMessage('payment-status', 'شماره کارت هنوز دریافت نشده است.', true);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(currentCardNumber);
+    showMessage('payment-status', 'شماره کارت کپی شد.');
+  } catch {
+    showMessage('payment-status', 'کپی خودکار در این مرورگر ممکن نیست؛ شماره کارت را انتخاب و کپی کن.', true);
+  }
+});
+
+document.getElementById('category-filters').addEventListener('click', event => {
+  const button = event.target.closest('[data-category]');
+  if (!button) return;
+  activeCategory = button.dataset.category;
+  document.querySelectorAll('.filter-btn').forEach(item => item.classList.toggle('active', item === button));
+  renderProjects();
+});
+
+document.getElementById('project-form').addEventListener('submit', async function(event) {
+  event.preventDefault();
+  if (!requireLogin('برای ثبت پروژه ابتدا وارد حساب شو.')) return;
+  const button = document.getElementById('project-submit');
+  const payload = {
+    title:document.getElementById('project-title').value.trim(),
+    category:document.getElementById('project-category').value,
+    budget:Number(document.getElementById('project-budget').value),
+    description:document.getElementById('project-description').value.trim()
+  };
+  if (payload.title.length < 3 || !payload.description || !Number.isSafeInteger(payload.budget) || payload.budget < 0) {
+    showMessage('project-form-status', 'عنوان، توضیحات و بودجه معتبر را وارد کن.', true);
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'در حال ارسال...';
+  try {
+    await apiRequest('/api/projects', {method:'POST', body:JSON.stringify(payload)});
+    showMessage('project-form-status', 'پروژه با موفقیت به سرور ارسال شد.');
+    this.reset();
+    await loadProjects();
+  } catch (error) {
+    showMessage('project-form-status', 'ثبت پروژه انجام نشد: ' + error.message, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'ارسال پروژه';
+  }
+});
+
+loadPlans();
+loadProjects();
+refreshAccount();
+</script>
 </body>
 </html>
